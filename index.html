@@ -1,0 +1,2771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wild Maze</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#1a2810;--panel:#111c08;--border:#243414;
+  --accent:#f0d060;--text:#d0e8a0;--dim:#4a6030;--correct:#68d848;
+}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px}
+.wrapper{width:100%;max-width:700px;display:flex;flex-direction:column;gap:12px}
+
+/* ── SCREENS ── */
+.screen{width:100%;max-width:520px;display:none;flex-direction:column;align-items:center;gap:22px;min-height:100vh;justify-content:center;text-align:center}
+.screen.active{display:flex}
+.screen-title{font-size:clamp(1rem,4vw,1.6rem);font-weight:900;color:var(--accent);text-shadow:0 2px 14px rgba(0,0,0,.6);line-height:1.3}
+.screen-sub{font-size:.82rem;font-weight:700;color:var(--dim);letter-spacing:.05em}
+
+/* ── INTRO PANEL ── */
+.intro-box{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px 20px;width:100%;text-align:left;display:flex;flex-direction:column;gap:10px}
+.intro-box h3{font-size:.72rem;font-weight:900;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+.intro-box p{font-size:.8rem;font-weight:700;color:var(--text);line-height:1.7}
+.intro-box p strong{color:var(--accent)}
+.score-formula{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.sf-item{background:#0a1406;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:.68rem;font-weight:800;color:var(--dim);line-height:1.5}
+.sf-item span{color:var(--text);display:block;font-size:.78rem}
+
+/* ── BEST SCORES ── */
+.best-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:12px;width:100%;position:relative;overflow:hidden}
+.best-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.best-entries{display:flex;gap:14px;flex:1;flex-wrap:wrap}
+.best-entry{display:flex;flex-direction:column;gap:1px;min-width:60px}
+.best-label{font-size:.52rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.best-val{font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--accent)}
+.best-val.new-record{animation:rec-flash .5s steps(2) 4}
+@keyframes rec-flash{0%,100%{color:var(--accent)}50%{color:#fff}}
+.best-trophy{font-size:1.3rem}
+.best-who{font-size:1.1rem;line-height:1}
+
+/* ── BIOME GRID ── */
+.biome-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%}
+.biome-card{background:var(--panel);border:2px solid var(--border);border-radius:14px;padding:18px 8px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s}
+.biome-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.biome-emoji{font-size:2.4rem;line-height:1}
+.biome-name{font-size:.65rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.biome-card-prehistoric{background:#1a0a04;border:2px solid #6a3010;border-radius:14px;padding:18px 8px 14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s;grid-column:1/-1;justify-self:center;width:calc(33% - 4px);box-shadow:0 0 18px rgba(240,112,0,.12)}
+.biome-card-prehistoric:hover{transform:translateY(-3px);box-shadow:0 8px 24px rgba(240,112,0,.3)}
+.prehistoric-star{color:#f07000;font-size:.65rem}
+/* Countdown bar */
+.dragon-path-cell{fill:rgba(180,0,0,.15);stroke:#8b0000;stroke-width:1.5}
+.dragon-emoji{pointer-events:none}
+.countdown-fill{height:100%;background:#f07000;border-radius:3px;transition:width .2s linear}
+.countdown-fill.danger{background:#e03010;animation:danger-pulse .5s infinite alternate}
+@keyframes danger-pulse{from{opacity:1}to{opacity:.5}}
+/* Relic row in win card */
+.relic-row{display:flex;align-items:center;gap:10px;background:#2a1206;border:1.5px solid #f07000;border-radius:10px;padding:10px 13px;width:100%;position:relative;overflow:hidden}
+.relic-row::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(240,112,0,.08),transparent);pointer-events:none}
+.relic-badge{font-size:.45rem;font-weight:900;background:#f07000;color:#1a0a04;padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;position:absolute;top:7px;right:9px}
+.relic-emoji{font-size:1.8rem;flex-shrink:0}
+.relic-text{font-size:.58rem;font-weight:700;color:#8a5030;line-height:1.4}
+.relic-text strong{color:#f07000;display:block;font-size:.65rem}
+
+/* ── ANIMAL GRID ── */
+.animal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:100%}
+.animal-card{background:var(--panel);border:2px solid var(--border);border-radius:11px;padding:14px 5px 10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .2s}
+.animal-card:hover{border-color:var(--accent);background:#182810;transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.animal-card .ae{font-size:2.2rem;line-height:1}
+.animal-card .an{font-size:.58rem;font-weight:900;color:var(--dim);letter-spacing:.07em;text-transform:uppercase}
+.animal-card:hover .an{color:var(--accent)}
+.back-btn{background:none;border:1px solid var(--border);color:var(--dim);padding:7px 16px;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.78rem;cursor:pointer;transition:all .2s}
+.back-btn:hover{border-color:var(--text);color:var(--text)}
+.biome-desc-box{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 18px;width:100%;display:flex;align-items:flex-start;gap:12px}
+.biome-desc-icon{font-size:2rem;flex-shrink:0;margin-top:2px}
+.biome-desc-text{font-size:.8rem;font-weight:700;color:var(--dim);line-height:1.65;text-align:left}
+
+/* ── INFO OVERLAY ── */
+#info-overlay,#win-overlay{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:rgba(3,8,2,.9);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .3s}
+#info-overlay.show,#win-overlay.show{opacity:1;pointer-events:all}
+.info-card{background:#0e1a08;border:2px solid var(--border);border-radius:18px;padding:18px 18px 16px;max-width:370px;width:92%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.7);animation:card-in .35s cubic-bezier(.34,1.56,.64,1)}
+@keyframes card-in{from{transform:scale(.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.ic-emoji{font-size:2.8rem;line-height:1;filter:drop-shadow(0 3px 8px rgba(0,0,0,.5))}
+.ic-name{font-size:.95rem;font-weight:900;color:var(--accent)}
+.ic-latin{font-size:.6rem;font-weight:700;color:var(--dim);font-style:italic;margin-top:-8px}
+.ic-fact{font-size:.81rem;font-weight:700;color:var(--text);text-align:center;line-height:1.65}
+.ic-fact strong{color:var(--accent)}
+.ic-row{display:flex;align-items:center;gap:10px;background:#142010;border:1px solid var(--border);border-radius:10px;padding:10px 13px;width:100%}
+.ic-row-emoji{font-size:1.8rem;flex-shrink:0}
+.ic-row-text{font-size:.7rem;font-weight:700;color:var(--dim);line-height:1.55}
+.ic-row-text strong{color:var(--text);display:block;font-size:.78rem}
+.ic-score-box{display:flex;align-items:center;justify-content:center;gap:10px;background:#0a1406;border:1px solid var(--border);border-radius:10px;padding:10px 16px;width:100%}
+.ic-score-val{font-family:"Space Mono",monospace;font-size:1.45rem;font-weight:700;color:var(--accent)}
+.ic-score-label{font-size:.55rem;font-weight:800;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.ic-btn{background:var(--accent);border:none;color:#0e1a08;padding:9px 0;border-radius:9px;font-family:"Nunito",sans-serif;font-weight:900;font-size:.85rem;cursor:pointer;transition:all .2s;width:100%}
+.ic-btn:hover{transform:scale(1.03);box-shadow:0 6px 20px rgba(240,208,96,.4)}
+.ic-btn-sec{background:none;border:1px solid var(--border);color:var(--dim);padding:7px 0;border-radius:8px;font-family:"Nunito",sans-serif;font-weight:800;font-size:.76rem;cursor:pointer;width:100%;transition:all .2s}
+.ic-btn-sec:hover{border-color:var(--text);color:var(--text)}
+
+/* ── GAME SCREEN ── */
+header{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px}
+.title-group{display:flex;align-items:center;gap:9px}
+.hero-badge{font-size:1.8rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.5))}
+h1{font-size:clamp(.7rem,2.2vw,1rem);font-weight:900;color:var(--accent)}
+h1 small{display:block;font-family:'Space Mono',monospace;font-size:.58rem;font-weight:700;color:var(--dim);letter-spacing:.1em;margin-top:2px}
+.biome-tag{font-size:.65rem;font-weight:800;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--border);border-radius:5px;padding:3px 8px}
+
+.op-panel{background:var(--panel);border:1px solid var(--border);border-radius:11px;padding:13px 17px;display:flex;align-items:center;gap:12px;position:relative;overflow:hidden}
+.op-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.op-label{font-size:.58rem;font-weight:800;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;line-height:1.8;white-space:nowrap}
+.op-eq{font-family:'Space Mono',monospace;font-size:1.8rem;font-weight:700;color:var(--accent);flex:1;text-align:center}
+
+.progress-bar{height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#68d848,#f0d060);border-radius:3px;transition:width .5s ease}
+
+.grid-container{background:#060e04;border:1px solid var(--border);border-radius:13px;padding:11px;position:relative;display:flex;justify-content:center;overflow:hidden}
+#hex-svg{display:block}
+
+.stats{display:flex;gap:7px}
+.stat{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:9px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.stat-label{font-size:.52rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.stat-value{font-family:'Space Mono',monospace;font-size:1.2rem;font-weight:700;color:#fff}
+
+/* ── FOOD COLLECTED ── */
+.food-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 13px;display:flex;flex-direction:column;gap:8px}
+.food-panel-title{font-size:.55rem;font-weight:900;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.food-grid{display:flex;flex-wrap:wrap;gap:6px}
+.food-chip{display:flex;align-items:center;gap:4px;background:#0a1406;border:1px solid var(--border);border-radius:8px;padding:4px 8px;font-size:.7rem;cursor:pointer;transition:all .15s}
+.food-chip:hover{border-color:var(--accent);background:#122010}
+.food-chip .fc-food{font-size:1rem}
+.food-chip .fc-animal{font-size:.75rem}
+
+/* ── FIND DETAIL OVERLAY ── */
+#find-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(3,8,2,.92);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .3s}
+#find-overlay.show{opacity:1;pointer-events:all}
+.food-empty{font-size:.72rem;color:var(--dim);font-weight:700}
+
+.footer-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px}
+.new-game-btn{background:var(--accent);border:none;color:#0e1a08;padding:9px 15px;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:900;font-size:.76rem;cursor:pointer;transition:all .2s}
+.new-game-btn:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(240,208,96,.35)}
+
+/* ── READY BAR ── */
+#ready-bar{transition:opacity .3s}
+#ready-bar.hide{opacity:0;pointer-events:none}
+.ready-btn{background:var(--accent);border:none;color:#0e1a08;padding:8px 18px;border-radius:7px;font-family:'Nunito',sans-serif;font-weight:900;font-size:.8rem;cursor:pointer;white-space:nowrap;transition:all .2s}
+.ready-btn:hover{transform:scale(1.04);box-shadow:0 4px 14px rgba(240,208,96,.4)}
+/* diff chips */
+.diff-chip{background:#0a1406;border:1px solid var(--border);border-radius:6px;padding:3px 9px;font-size:.65rem;font-weight:800;color:var(--text)}
+/* ── ABILITIES ── */
+.ability-panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:9px 13px;display:flex;flex-direction:column;gap:7px;width:100%}
+.ability-panel-title{font-size:.54rem;font-weight:900;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.ability-slots{display:flex;gap:8px;flex-wrap:wrap}
+.ability-chip{display:flex;align-items:center;gap:4px;background:#0a1406;border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:default;transition:all .2s}
+.ability-chip .ac-icon{font-size:.95rem;line-height:1}
+.ability-chip .ac-name{font-size:.6rem;font-weight:800;color:var(--text)}
+.ability-chip.usable{border-color:var(--accent);cursor:pointer}
+.ability-chip.usable:hover{background:#182810;transform:scale(1.05)}
+.ability-chip.life-passive{border-color:#ff6060}
+.ability-chip.life-passive .ac-name{color:#ff9090}
+.ability-empty{font-size:.72rem;color:var(--dim);font-weight:700}
+.ability-earned{background:#0e1a08;border:2px solid var(--accent);border-radius:14px;padding:16px 18px;width:100%;display:flex;align-items:center;gap:12px;animation:card-in .4s cubic-bezier(.34,1.56,.64,1);margin-top:4px}
+.ability-earned .ae-icon{font-size:2.2rem;line-height:1}
+.ability-earned .ae-info strong{color:var(--accent);display:block;font-size:.88rem;font-weight:900}
+.ability-earned .ae-info span{font-size:.75rem;font-weight:700;color:var(--dim);line-height:1.5}
+
+.bonus-float{position:fixed;font-family:'Nunito',sans-serif;font-weight:900;font-size:.85rem;color:#fff;pointer-events:none;z-index:500;text-shadow:0 0 6px #f0d060,0 0 12px #f0d060;white-space:nowrap;animation:float-up 1.1s ease-out forwards}
+.error-float{position:fixed;font-family:'Nunito',sans-serif;font-weight:900;font-size:.85rem;color:#ff6060;pointer-events:none;z-index:500;text-shadow:0 0 6px #e04040,0 0 12px #e04040;white-space:nowrap;animation:float-up 1.1s ease-out forwards}
+@keyframes float-up{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-90px) scale(1.05)}100%{opacity:0;transform:translate(-50%,-130px) scale(.9)}}
+
+/* ── TUTORIAL ── */
+#tutorial-overlay{position:fixed;inset:0;z-index:400;display:none}
+#tutorial-overlay.active{display:block}
+.tut-bubble{position:fixed;background:#0e1a08;border:2px solid var(--accent);border-radius:12px;padding:11px 14px;max-width:280px;width:88vw;display:flex;flex-direction:column;gap:7px;box-shadow:0 8px 32px rgba(0,0,0,.8);z-index:402}
+.tut-step{font-size:.5rem;font-weight:900;color:var(--dim);letter-spacing:.1em;text-transform:uppercase}
+.tut-text{font-size:.72rem;font-weight:700;color:var(--text);line-height:1.55}
+.tut-text strong{color:var(--accent)}
+.tut-dots{display:flex;gap:4px;justify-content:center}
+.tut-dot{width:6px;height:6px;border-radius:50%;background:var(--border);transition:background .2s}
+.tut-dot.on{background:var(--accent)}
+.tut-btns{display:flex;gap:7px}
+.tut-next{background:var(--accent);border:none;color:#0e1a08;padding:6px 0;border-radius:6px;font-family:'Nunito',sans-serif;font-weight:900;font-size:.72rem;cursor:pointer;flex:2}
+.tut-skip{background:none;border:1px solid var(--border);color:var(--dim);padding:6px 0;border-radius:6px;font-family:'Nunito',sans-serif;font-weight:800;font-size:.68rem;cursor:pointer;flex:1}
+.tut-highlight{position:fixed;border-radius:8px;pointer-events:none;z-index:401;box-shadow:0 0 0 9999px rgba(3,8,2,.75),0 0 0 3px var(--accent);transition:all .35s}
+
+/* ── GAME OVER OVERLAY ── */
+#gameover-overlay{position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;background:rgba(20,4,4,.96);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .35s}
+#gameover-overlay.show{opacity:1;pointer-events:all}
+#settings-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(3,8,2,.92);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .3s}
+#settings-overlay.show{opacity:1;pointer-events:all}
+.confirm-row{display:flex;gap:8px;width:100%}
+.confirm-row .ic-btn{flex:1}
+.confirm-row .ic-btn-sec{flex:1}
+.danger-btn{background:none;border:2px solid #cc3030;color:#ff6060;padding:11px 0;border-radius:9px;font-family:'Nunito',sans-serif;font-weight:900;font-size:.9rem;cursor:pointer;width:100%;transition:all .2s}
+.danger-btn:hover{background:rgba(200,48,48,.15)}
+#instr-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(3,8,2,.92);backdrop-filter:blur(7px);opacity:0;pointer-events:none;transition:opacity .3s}
+#instr-overlay.show{opacity:1;pointer-events:all}
+
+/* ── ACHIEVEMENTS OVERLAY ── */
+#achievements-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(3,8,2,.95);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .3s}
+#achievements-overlay.show{opacity:1;pointer-events:all}
+.ach-card{background:#0e1a08;border:2px solid var(--border);border-radius:18px;padding:20px 18px 18px;max-width:420px;width:94%;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.8);animation:card-in .35s cubic-bezier(.34,1.56,.64,1)}
+.ach-header{display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.ach-title{font-size:1rem;font-weight:900;color:var(--accent);letter-spacing:.04em}
+.ach-counter{font-size:.62rem;font-weight:800;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;background:#0a1406;border:1px solid var(--border);border-radius:6px;padding:3px 9px}
+.ach-row{display:flex;align-items:center;gap:11px;background:#0a1406;border:1px solid var(--border);border-radius:11px;padding:10px 12px;transition:all .2s;position:relative;overflow:hidden}
+.ach-row.earned{border-color:#3a6020;background:#0e1a08}
+.ach-row.earned .ach-name{color:#68d848}
+.ach-row.earned::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:#68d848;border-radius:3px 0 0 3px}
+.ach-row.locked{opacity:.55}
+.ach-row.secret-locked{opacity:.35}
+.ach-icon{font-size:1.6rem;line-height:1;flex-shrink:0;width:32px;text-align:center}
+.ach-body{flex:1;min-width:0}
+.ach-name{font-size:.72rem;font-weight:900;color:var(--accent);letter-spacing:.03em}
+.ach-row.locked .ach-name{color:var(--dim)}
+.ach-row.secret-locked .ach-name{color:#2a3a20}
+.ach-desc{font-size:.62rem;font-weight:700;color:var(--dim);line-height:1.5;margin-top:1px}
+.ach-row.locked .ach-desc{color:#2a3a20}
+.ach-row.secret-locked .ach-desc{color:#1e2a18}
+.ach-date{font-size:.52rem;font-weight:800;color:#3a6020;letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+
+/* ── WIN CARD ACHIEVEMENT NOTIFICATION ── */
+.ach-win-notif{width:100%;background:#0a1808;border:2px solid var(--accent);border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:10px;animation:card-in .4s cubic-bezier(.34,1.56,.64,1);position:relative;overflow:hidden}
+.ach-win-notif::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(104,216,72,.07),transparent);pointer-events:none}
+.ach-win-notif-icon{font-size:1.6rem;flex-shrink:0}
+.ach-win-notif-text strong{color:var(--accent);display:block;font-size:.72rem;font-weight:900}
+.ach-win-notif-text span{font-size:.6rem;font-weight:700;color:var(--dim);line-height:1.4}
+.ach-win-badge{font-size:.42rem;font-weight:900;background:var(--accent);color:#0e1a08;padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.07em;position:absolute;top:7px;right:9px}
+.instr-card{background:#0e1a08;border:2px solid var(--border);border-radius:18px;padding:26px 22px 20px;max-width:380px;width:92%;max-height:80vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 60px rgba(0,0,0,.7);animation:card-in .35s cubic-bezier(.34,1.56,.64,1)}
+.instr-card h2{font-size:1rem;font-weight:900;color:var(--accent);letter-spacing:.04em;text-align:center}
+.instr-card p{font-size:.82rem;font-weight:700;color:var(--text);line-height:1.7}
+.instr-card p strong{color:var(--accent)}
+.instr-score-grid{display:flex;flex-wrap:wrap;gap:7px}
+.instr-score-grid .sf-item{background:#0a1406;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:.68rem;font-weight:800;color:var(--dim);line-height:1.5}
+.instr-score-grid .sf-item span{color:var(--text);display:block;font-size:.78rem}
+</style>
+</head>
+<body>
+
+<!-- ══ SCREEN 1: INTRO ══════════════════════════════ -->
+<div class="screen active" id="s-intro">
+  <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+    <div class="screen-title">🌍 WILD MAZE</div>
+    <div id="dragon-badge-menu" style="display:none;font-size:1.2rem" title="Dragon Race Champion">🐉</div>
+  </div>
+  <div class="screen-sub">A nature adventure number game</div>
+
+  <!-- Best scores -->
+  <div class="best-panel" id="intro-best" style="display:none;width:100%">
+    <div class="best-trophy">🏆</div>
+    <div class="best-entries">
+      <div class="best-entry"><div class="best-label">Best Score</div><div class="best-val" id="ib-score">—</div></div>
+      <div class="best-entry"><div class="best-label">Best Time</div><div class="best-val" id="ib-time">—</div></div>
+      <div class="best-entry"><div class="best-label">By</div><div class="best-val" id="ib-who" style="font-size:1.4rem">—</div></div>
+    </div>
+  </div>
+
+  <!-- Ability inventory -->
+  <div class="ability-panel" id="intro-ability-panel" style="display:none">
+    <div class="ability-panel-title">🎒 Abilities</div>
+    <div class="ability-slots" id="intro-ability-slots"><span class="ability-empty">No abilities yet — solve fast to earn one!</span></div>
+  </div>
+
+  <!-- Food collected -->
+  <div class="food-panel" id="intro-food-panel" style="width:100%;display:none">
+    <div class="food-panel-title">🗺️ Finds</div>
+    <div class="food-grid" id="intro-food-grid"><span class="food-empty">Nothing found yet…</span></div>
+  </div>
+
+  <!-- Ancient relics -->
+  <div class="food-panel" id="intro-relics-panel" style="width:100%;display:none;background:#1a1404;border-color:#6a5010">
+    <div class="food-panel-title" style="color:#f0d060">✨ Ancient Relics</div>
+    <div class="food-grid" id="intro-relics-grid"></div>
+  </div>
+
+  <!-- Dragon Race card -->
+  <div id="dragon-race-card" style="display:none;width:100%;background:linear-gradient(135deg,#0e0604,#1a0a04);border:2px solid #8b0000;border-radius:14px;padding:16px;flex-direction:column;align-items:center;gap:8px;box-shadow:0 0 24px rgba(180,0,0,.2)">
+    <div style="font-size:2rem">🐉</div>
+    <div style="font-size:.8rem;font-weight:900;color:#e03020;letter-spacing:.06em;text-transform:uppercase">Dragon Race</div>
+    <div style="font-size:.65rem;font-weight:700;color:#8a4030;text-align:center;line-height:1.6">You've collected all 3 ancient relics. The Dragon has been summoned — race to the goal before it does. Win or lose, your relics will be consumed.</div>
+    <button class="ic-btn" style="background:#8b0000;max-width:200px;margin-top:4px" onclick="showDragonRaceScreen()">⚔️ Race Now</button>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:340px">
+    <button class="ic-btn" onclick="handlePlayBtn()">▶ PLAY</button>
+    <button class="ic-btn-sec" id="tutorial-btn" onclick="startTutorial()">🎓 Tutorial</button>
+    <button class="ic-btn-sec" onclick="showAchievements()">🏆 Achievements <span id="ach-menu-counter" style="font-size:.6rem;font-weight:800;color:var(--dim);margin-left:4px"></span></button>
+    <button class="ic-btn-sec" onclick="showInstructions()">📖 How to Play</button>
+    <button class="ic-btn-sec" onclick="document.getElementById('settings-overlay').classList.add('show')">⚙️ Settings</button>
+  </div>
+</div>
+
+<!-- ══ DRAGON RACE SCREEN ═══════════════════ -->
+<div class="screen" id="s-dragon">
+  <button class="back-btn" onclick="showScreen('s-intro')">← Back</button>
+  <div class="screen-title" style="color:#e03020">🐉 Dragon Race</div>
+  <div class="screen-sub" style="color:#8a4030">Choose your champion — race the Dragon to the goal</div>
+  <div id="dragon-animal-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%"></div>
+</div>
+<div id="instr-overlay">
+  <div class="instr-card">
+    <h2>📖 HOW TO PLAY</h2>
+    <p>You are an animal lost in a wild landscape, searching for food hidden somewhere in the grid. You can only see the numbers on the <strong>6 hexagons next to you</strong>. An operation is shown — apply it to your current number and tap the right neighbour. Find your way to the hidden goal!</p>
+    <p>Before each game, you get to <strong>look around</strong> first. Numbers are hidden until you tap "I'm Ready!" — then the timer starts.</p>
+    <div style="font-size:.78rem;font-weight:900;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-top:2px">Difficulty Levels ⭐–⭐⭐⭐⭐⭐</div>
+    <p style="margin-top:-4px">Each animal has a star rating. Higher levels add new challenges — the info card always explains what's new. Harder animals earn more points per step.</p>
+    <p><strong>⛓ Op Chain</strong> — two operations shown (e.g. "+5 then ×3"). Calculate both steps mentally.<br>
+    <strong>🔄 Reverse</strong> — shown as "×? = 12". Find the missing operand in the neighbours.<br>
+    <strong>🌫 Fog</strong> — neighbour numbers disappear after 2 seconds. Work fast!</p>
+    <div style="font-size:.78rem;font-weight:900;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin-top:2px">🎒 Abilities</div>
+    <p style="margin-top:-4px">Finish a game fast to earn an ability — the faster your average step time, the better. Abilities persist across sessions and can be used mid-game from the ability bar.</p>
+    <p><strong>🤖 Auto</strong> — auto-taps the correct next cell. Earned avg &lt;4s/step.<br>
+    <strong>🧊 Freeze</strong> — pauses the timer until you tap. Earned avg &lt;8s/step.<br>
+    <strong>❤️ Life</strong> — silently absorbs your next error. Earned avg &lt;14s/step.</p>
+    <div style="font-size:.78rem;font-weight:900;color:var(--accent);letter-spacing:.06em;text-transform:uppercase">Score</div>
+    <p style="margin-top:-6px">Start at <strong>0</strong> and build your score. Every correct step earns points — the faster you solve, the higher you climb!</p>
+    <div class="instr-score-grid">
+      <div class="sf-item">✅ Step<span>+500 pts</span></div>
+      <div class="sf-item">⏱ Time<span>−8 pts/sec</span></div>
+      <div class="sf-item">❌ Error<span>−150 pts</span></div>
+      <div class="sf-item">⚡ &lt;1.2s<span>+200 pts</span></div>
+      <div class="sf-item">🔥 &lt;2.5s<span>+100 pts</span></div>
+      <div class="sf-item">✨ &lt;5s<span>+50 pts</span></div>
+    </div>
+    <button class="ic-btn" onclick="document.getElementById('instr-overlay').classList.remove('show')">Got it!</button>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: BIOME ══════════════════════════════ -->
+<div class="screen" id="s-biome">
+  <div class="screen-title">Choose your biome</div>
+  <div class="biome-grid" id="biome-grid"></div>
+  <button class="back-btn" onclick="showScreen('s-intro')">← Back</button>
+</div>
+
+<!-- ══ SCREEN 3: ANIMAL ═════════════════════════════ -->
+<div class="screen" id="s-animal">
+  <div style="display:flex;align-items:center;gap:10px;justify-content:center">
+    <div id="chosen-biome-emoji" style="font-size:1.8rem"></div>
+    <div class="screen-title" id="animal-screen-title">Choose your animal</div>
+  </div>
+  <div class="biome-desc-box" id="biome-desc-box">
+    <div class="biome-desc-icon" id="biome-desc-icon"></div>
+    <div class="biome-desc-text" id="biome-desc-text"></div>
+  </div>
+  <div class="animal-grid" id="animal-grid"></div>
+  <button class="back-btn" onclick="showScreen('s-biome')">← Back</button>
+</div>
+
+<!-- ══ INFO OVERLAY ══════════════════════════════════ -->
+<div id="info-overlay">
+  <div class="info-card">
+    <div class="ic-emoji" id="ic-emoji"></div>
+    <div class="ic-name"  id="ic-name"></div>
+    <div class="ic-latin" id="ic-latin"></div>
+    <div class="ic-fact"  id="ic-fact"></div>
+    <div class="ic-row" id="ic-diff-row" style="flex-direction:column;align-items:flex-start;gap:8px">
+      <div style="font-size:.8rem;font-weight:900;color:var(--accent)" id="ic-diff-title"></div>
+      <div id="ic-diff-chips" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div>
+    <div class="ic-row">
+      <div class="ic-row-emoji">🌲</div>
+      <div class="ic-row-text">Your goal is hidden<br><strong>somewhere in the wild…</strong></div>
+    </div>
+    <button class="ic-btn" id="ic-start-btn">▶ ENTER THE WILD</button>
+    <button class="ic-btn-sec" onclick="document.getElementById('info-overlay').classList.remove('show')">← Back</button>
+  </div>
+</div>
+
+<!-- ══ WIN OVERLAY ═══════════════════════════════════ -->
+<div id="win-overlay">
+  <div class="info-card">
+    <div class="ic-emoji" id="win-emoji"></div>
+    <div class="ic-name"  id="win-title"></div>
+    <div class="ic-latin" id="win-sub"></div>
+    <div class="ic-score-box">
+      <div>
+        <div class="ic-score-label">Score</div>
+        <div class="ic-score-val" id="win-score-big">0</div>
+      </div>
+      <div style="width:1px;height:36px;background:var(--border)"></div>
+      <div style="text-align:center">
+        <div class="ic-score-label">Best</div>
+        <div style="font-family:'Space Mono',monospace;font-size:1rem;font-weight:700;color:var(--dim)" id="win-best-score">—</div>
+      </div>
+    </div>
+    <div class="ic-row" style="flex-direction:column;align-items:flex-start;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="ic-row-emoji" id="win-goal-emoji"></div>
+        <div class="ic-row-text" id="win-goal-name"></div>
+      </div>
+      <div style="font-size:.76rem;font-weight:700;color:var(--dim);line-height:1.65" id="win-diet"></div>
+    </div>
+    <div id="win-ability-earned" style="display:none;width:100%"></div>
+    <div id="win-achievements-earned" style="display:none;width:100%;flex-direction:column;gap:6px"></div>
+    <div id="win-relic-row" class="relic-row" style="display:none">
+      <span class="relic-badge" id="win-relic-badge">First!</span>
+      <div class="relic-emoji" id="win-relic-emoji"></div>
+      <div class="relic-text">
+        <strong id="win-relic-name"></strong>
+        <span id="win-relic-desc"></span>
+      </div>
+    </div>
+    <div id="win-tier-row" style="display:none;width:100%;background:var(--panel);border:1.5px solid var(--accent);border-radius:10px;padding:10px 13px;flex-direction:column;gap:6px">
+      <div style="font-size:.55rem;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:.1em">🔓 Unlocked!</div>
+      <div id="win-tier-text" style="font-size:.7rem;font-weight:700;color:var(--dim);line-height:1.5"></div>
+      <div id="win-tier-animals" style="display:flex;flex-wrap:wrap;gap:6px;font-size:1.4rem"></div>
+    </div>
+    <button class="ic-btn" onclick="winPlayAgain()">▶ PLAY AGAIN</button>
+    <button class="ic-btn-sec" onclick="winChangeBiome()">Change Biome / Animal</button>
+    <button class="ic-btn-sec" onclick="document.getElementById('win-overlay').classList.remove('show');if(_timer)clearInterval(_timer);showScreen('s-intro')">🏠 Main Menu</button>
+  </div>
+</div>
+
+<!-- ══ GAME SCREEN ═══════════════════════════════════ -->
+<div class="wrapper" id="game-screen" style="display:none">
+  <header>
+    <div class="title-group">
+      <div class="hero-badge" id="hero-badge"></div>
+      <h1>WILD MAZE<small id="step-info">STEP — / —</small></h1>
+    </div>
+    <div id="s-time" style="font-family:'Space Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--accent)">0s</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="s-errors" style="font-size:.7rem;letter-spacing:1px">❤️❤️❤️</div>
+      <div class="biome-tag" id="biome-tag"></div>
+    </div>
+  </header>
+  <div id="countdown-bar-wrap" style="display:none;width:100%">
+    <div class="countdown-bar"><div class="countdown-fill" id="countdown-fill" style="width:100%"></div></div>
+  </div>
+  <div style="position:relative">
+    <div class="op-panel">
+      <div class="op-label">NEXT<br>STEP</div>
+      <div class="op-eq" id="op-text" style="font-size:clamp(1rem,4vw,1.8rem)">—</div>
+      <div id="op-mode" style="font-size:1rem;min-width:20px;text-align:right"></div>
+    </div>
+    <div id="ready-bar" style="position:absolute;inset:0;border-radius:11px;background:var(--panel);border:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:12px 16px;transition:opacity .3s">
+      <div style="font-size:1.8rem;line-height:1" id="ready-animal"></div>
+      <div style="flex:1">
+        <div style="font-size:.82rem;font-weight:900;color:var(--accent)">Look around the wild!</div>
+        <div style="font-size:.62rem;font-weight:700;color:var(--dim)">Numbers appear when you start</div>
+      </div>
+      <button class="ready-btn" id="ready-btn">▶ I'M READY!</button>
+    </div>
+  </div>
+
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+
+  <div class="grid-container"><svg id="hex-svg"></svg></div>
+
+  <div class="ability-panel" id="game-ability-panel">
+    <div class="ability-panel-title">🎒 Abilities</div>
+    <div class="ability-slots" id="game-ability-slots"><span class="ability-empty">No abilities</span></div>
+  </div>
+
+  <div class="footer-row">
+    <button class="back-btn" onclick="goMainMenu()">🏠 Menu</button>
+    <button class="new-game-btn" onclick="goPickAnimal()">NEW GAME</button>
+  </div>
+</div>
+
+<!-- ══ FIND DETAIL OVERLAY ══════════════════════════ -->
+<div id="find-overlay">
+  <div class="info-card">
+    <div style="display:flex;align-items:center;gap:12px;width:100%">
+      <div style="font-size:3rem;line-height:1" id="fd-animal-emoji"></div>
+      <div>
+        <div class="ic-name" id="fd-animal-name"></div>
+        <div class="ic-latin" id="fd-animal-latin"></div>
+      </div>
+    </div>
+    <div class="ic-fact" id="fd-fact"></div>
+    <div class="ic-row">
+      <div class="ic-row-emoji" id="fd-food-emoji"></div>
+      <div class="ic-row-text">Found: <strong id="fd-food-name"></strong><br><span style="font-weight:700;color:var(--dim);font-size:.72rem" id="fd-diet"></span></div>
+    </div>
+    <div style="font-size:.62rem;font-weight:700;color:var(--dim);letter-spacing:.06em" id="fd-biome"></div>
+    <button class="ic-btn" onclick="document.getElementById('find-overlay').classList.remove('show')">Close</button>
+  </div>
+</div>
+
+<!-- ══ TUTORIAL OVERLAY ══════════════════════════════ -->
+<div id="tutorial-overlay">
+  <div class="tut-highlight" id="tut-highlight"></div>
+  <div class="tut-bubble" id="tut-bubble" style="visibility:hidden;left:50%;top:50%;transform:translate(-50%,-50%);bottom:auto">
+    <div class="tut-step" id="tut-step"></div>
+    <div class="tut-text"  id="tut-text"></div>
+    <div class="tut-dots"  id="tut-dots"></div>
+    <div class="tut-btns">
+      <button class="tut-skip" onclick="skipTutorial()">Skip →</button>
+      <button class="tut-next" id="tut-next-btn" onclick="tutNext()">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ GAME OVER OVERLAY ═════════════════════════════ -->
+<!-- Prehistoric unlock overlay -->
+<div id="prehistoric-unlock-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:600;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px">
+  <div style="font-size:3rem;animation:card-in .5s cubic-bezier(.34,1.56,.64,1)">🌋</div>
+  <div style="font-size:1.1rem;font-weight:900;color:#f07000;text-align:center;line-height:1.5">A new world<br>has been discovered!</div>
+  <div style="font-size:.75rem;font-weight:700;color:#8a6040;text-align:center;max-width:260px;line-height:1.6">The prehistoric biome is now unlocked. Ancient giants await you.</div>
+  <div style="font-size:2rem;letter-spacing:6px">🦣🦕🦖</div>
+  <button id="prehistoric-unlock-btn" class="ic-btn" style="max-width:240px;margin-top:8px">Incredible! →</button>
+</div>
+
+<!-- Dragon race result overlay -->
+<div id="dragon-result-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;align-items:center;justify-content:center;padding:20px;overflow-y:auto">
+  <!-- WIN CARD -->
+  <div id="dragon-win-card" style="display:none;width:100%;max-width:360px">
+    <div class="info-card" style="gap:10px;border-color:#c0a000;background:#1a1404">
+      <div id="dr-goal-emoji" style="font-size:2.8rem"></div>
+      <div style="font-size:.95rem;font-weight:900;color:#f0d060">YOU OUTPACED THE DRAGON!</div>
+      <div style="font-size:.68rem;font-weight:700;color:#8a7030;text-align:center;line-height:1.6">You won the Dragon Race! You've completed the Wild Maze journey.</div>
+      <div id="dr-sub" style="font-size:.62rem;font-weight:700;color:#8a7030"></div>
+      <div class="ic-score-box" style="background:#120e04;border-color:#6a5010">
+        <div><div class="ic-score-label">Score</div><div class="ic-score-val" id="dr-score" style="color:#f0d060"></div></div>
+        <div style="width:1px;height:36px;background:#6a5010"></div>
+        <div><div class="ic-score-label">Time</div><div class="ic-score-val" id="dr-time" style="color:#f0d060;font-size:.9rem"></div></div>
+      </div>
+      <div class="ic-row" style="background:#200e04;border-color:#6a3010">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div id="dr-animal-emoji" style="font-size:1.8rem"></div>
+          <div style="font-size:.7rem;font-weight:700;color:#8a5030;line-height:1.55">
+            <strong id="dr-find-text" style="color:#e8c090;display:block;font-size:.78rem"></strong>
+            <span id="dr-diet"></span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;background:#1a1404;border:1.5px solid #c0a000;border-radius:10px;padding:10px 13px;width:100%">
+        <div style="font-size:1.8rem">🐉</div>
+        <div style="font-size:.68rem;font-weight:700;color:#8a7030;line-height:1.5">
+          <strong style="color:#f0d060;display:block;font-size:.75rem">🐉 Dragon Badge earned!</strong>
+          Collect all 3 relics again to race for a better score.
+        </div>
+      </div>
+      <div id="dragon-win-achievements" style="display:none;width:100%;flex-direction:column;gap:6px"></div>
+      <button class="ic-btn" style="background:#c0a000;color:#1a1404" onclick="closeDragonResult()">🏠 Main Menu</button>
+    </div>
+  </div>
+  <!-- LOSE CARD -->
+  <div id="dragon-lose-card" style="display:none;width:100%;max-width:360px">
+    <div class="info-card" style="gap:12px;border-color:#8b0000;background:#0e0604">
+      <div style="font-size:2.8rem">🐉</div>
+      <div style="font-size:.95rem;font-weight:900;color:#e03020">THE DRAGON WINS!</div>
+      <div style="font-size:.7rem;font-weight:700;color:#8a4030;text-align:center;line-height:1.6">The ancient beast reached the goal first.<br>Your relics are spent — collect all three again to challenge the Dragon.</div>
+      <button class="ic-btn" style="background:#8b0000" onclick="closeDragonResult()">🏠 Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ACHIEVEMENTS OVERLAY ══════════════════════════ -->
+<div id="achievements-overlay">
+  <div class="ach-card">
+    <div class="ach-header">
+      <div class="ach-title">🏆 Achievements</div>
+      <div class="ach-counter" id="ach-counter">0 / 0</div>
+    </div>
+    <div id="ach-list" style="display:flex;flex-direction:column;gap:7px"></div>
+    <button class="ic-btn-sec" style="margin-top:4px" onclick="document.getElementById('achievements-overlay').classList.remove('show')">Close</button>
+  </div>
+</div>
+
+<div id="gameover-overlay">
+  <div class="info-card" style="gap:14px;border-color:#cc3030">
+    <div style="font-size:3rem">💀</div>
+    <div class="ic-name" style="color:#ff6060">GAME OVER</div>
+    <div style="font-size:.8rem;font-weight:700;color:var(--dim);text-align:center;line-height:1.7">
+      You made <strong style="color:#ff6060">3 errors</strong>.<br>The forest claimed you this time…
+    </div>
+    <div style="font-size:.72rem;font-weight:700;color:var(--dim);text-align:center" id="go-stats"></div>
+    <button class="ic-btn" onclick="gameOverPlayAgain()">▶ TRY AGAIN</button>
+    <button class="ic-btn-sec" onclick="gameOverMainMenu()">🏠 Main Menu</button>
+  </div>
+</div>
+
+<!-- ══ SETTINGS OVERLAY ══════════════════════════════ -->
+<div id="settings-overlay">
+  <div class="info-card" style="gap:16px">
+    <div class="ic-name">⚙️ Settings</div>
+    <div style="font-size:.78rem;font-weight:700;color:var(--dim);line-height:1.7">Reset all saved data — best scores, finds, and abilities will be permanently deleted.</div>
+    <button class="danger-btn" onclick="confirmReset()">🗑 Reset All Data</button>
+    <button class="ic-btn-sec" onclick="document.getElementById('settings-overlay').classList.remove('show')">Close</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  BIOME & ANIMAL DATA
+// ═══════════════════════════════════════════
+const BIOMES = [
+  {
+    id:'forest', name:'Forest', emoji:'🌲',
+    desc:'Ancient trees, dappled light and hidden creatures. A dense woodland teeming with life beneath every branch and root.',
+    color:'#1a2e10', border:'#2a4a18', accent:'#68d848',
+    bg:'#060e04',
+    hexFills:{ idle:'#122e08', neighbor:'#1e5210', current:'#8a6828', visited:'#122e08', goal:'#122e08' },
+    hexStrokes:{ idle:'#1c4210', neighbor:'#4a8a28', current:'#c4a050', visited:'#6a8a30', goal:'#1c4210' },
+    forestEmojis:['🌲','🌲','🌳','🌿','🪨','🍄','🫐','🌰','🪵','🌾'],
+    animals:[
+      { emoji:'🦊', name:'Fox', latin:'Vulpes vulpes', stars:1,
+        fact:'Foxes have <strong>vertical slit pupils</strong> like cats, giving them excellent night vision.',
+        goals:[{emoji:'🐁',name:'Field Mouse',diet:'Small rodents make up the bulk of a fox\'s diet, especially in winter.'},{emoji:'🐇',name:'Wild Rabbit',diet:'A fox can reach 45 km/h to catch a rabbit in open ground.'},{emoji:'🫐',name:'Wild Berries',diet:'In summer foxes eat large quantities of berries and fallen fruit.'}]},
+      { emoji:'🐇', name:'Rabbit', latin:'Oryctolagus cuniculus', stars:1,
+        fact:"Rabbits eat their own droppings — <strong>cecotrophy</strong> — to extract extra nutrients.",
+        goals:[{emoji:'🌿',name:'Fresh Grass',diet:"Grass is a rabbit's main food; their teeth grow continuously to cope."},{emoji:'🌱',name:'Young Shoots',diet:'Tender shoots are a spring favourite, rich in water and nutrients.'},{emoji:'🥕',name:'Wild Roots',diet:'In winter rabbits dig up roots when surface vegetation is scarce.'}]},
+      { emoji:'🦔', name:'Hedgehog', latin:'Erinaceus europaeus', stars:2,
+        fact:'A hedgehog has <strong>5,000–7,000 hollow spines</strong> made of keratin.',
+        goals:[{emoji:'🐛',name:'Earthworm',diet:'Earthworms are their favourite food, located by an incredibly sensitive nose.'},{emoji:'🐞',name:'Beetle',diet:'Beetles and larvae are a crunchy staple — hundreds eaten in a single night.'},{emoji:'🍄',name:'Mushroom',diet:'Hedgehogs eat fungi to supplement their insect-based diet.'}]},
+      { emoji:'🐿️', name:'Squirrel', latin:'Sciurus vulgaris', stars:2,
+        fact:'Squirrels find buried nuts by <strong>smell through 30 cm of snow and soil</strong>.',
+        goals:[{emoji:'🌰',name:'Acorn',diet:'One squirrel can cache up to 10,000 acorns in a single season.'},{emoji:'🍄',name:'Mushroom',diet:'Squirrels dry mushrooms on branches — deliberately preserving food.'},{emoji:'🌰',name:'Hazelnut',diet:'Hazelnuts are opened by gnawing a precise hole with sharp incisors.'}]},
+      { emoji:'🦌', name:'Deer', latin:'Cervus elaphus', stars:3,
+        fact:'Antlers grow up to <strong>2.5 cm per day</strong> — the fastest-growing mammal tissue.',
+        goals:[{emoji:'🌿',name:'Forest Grass',diet:'Grass forms the base of deer diet, grazed at dawn and dusk.'},{emoji:'🍂',name:'Fallen Leaves',diet:'Autumn leaves are rich in tannins that help build winter fat reserves.'},{emoji:'🍎',name:'Wild Apple',diet:'Deer love windfall apples at forest edges in early autumn.'}]},
+      { emoji:'🐻', name:'Bear', latin:'Ursus arctos', stars:3,
+        fact:"Bears smell food from <strong>32 km away</strong> — 7× stronger than a bloodhound.",
+        goals:[{emoji:'🍯',name:'Wild Honey',diet:'Bears raid beehives; their thick fur protects from most stings.'},{emoji:'🐟',name:'Salmon',diet:'Before hibernation, bears eat up to 20,000 calories a day from river salmon.'},{emoji:'🫐',name:'Blueberries',diet:'Berries can make up 80% of a bear\'s summer diet — 200,000 per day.'}]},
+      { emoji:'🦡', name:'Badger', latin:'Meles meles', stars:4,
+        fact:'Badger <strong>setts</strong> can be used by the same family for over 100 years.',
+        goals:[{emoji:'🐛',name:'Earthworm',diet:'Badgers eat over 200 worms a night using their sensitive snout.'},{emoji:'🌰',name:'Wild Bulb',diet:'Powerful claws can move more soil than a human with a spade.'},{emoji:'🍄',name:'Mushroom',diet:'Mushrooms and fallen fruit when earthworms are deeper underground.'}]},
+      { emoji:'🐺', name:'Wolf', latin:'Canis lupus', stars:5,
+        fact:'Each wolf has a <strong>unique howl</strong>, like a fingerprint, audible 10 km away.',
+        goals:[{emoji:'🦌',name:'Young Deer',diet:'Wolves hunt in coordinated packs, targeting young or weak deer.'},{emoji:'🐁',name:'Field Mouse',diet:'When large prey is scarce, a wolf can catch dozens of mice in one night.'},{emoji:'🫐',name:'Wild Berries',diet:'Wolves are more omnivorous than thought — regularly eating summer fruit.'}]},
+    ]
+  },
+  {
+    id:'ocean', name:'Ocean', emoji:'🌊',
+    desc:'Vast blue depths where sunlight fades and pressure builds. A world of currents, coral and creatures of extraordinary intelligence.',
+    color:'#0a1a2e', border:'#183050', accent:'#40c8f0',
+    bg:'#020810',
+    hexFills:{ idle:'#050e1a', neighbor:'#0a1e30', current:'#1a4060', visited:'#050e1a', goal:'#050e1a' },
+    hexStrokes:{ idle:'#0c1e30', neighbor:'#2060a0', current:'#40a8d0', visited:'#204060', goal:'#0c1e30' },
+    forestEmojis:['🪸','🪸','🐚','🌊','🪨','🦀','🐠','🌿','💧','🐚'],
+    animals:[
+      { emoji:'🐬', name:'Dolphin', latin:'Delphinus delphis', stars:1,
+        fact:'Dolphins sleep with <strong>one brain hemisphere at a time</strong>, staying semi-conscious.',
+        goals:[{emoji:'🐟',name:'Sardine',diet:'Dolphins herd sardines into tight bait balls, then take turns feeding.'},{emoji:'🦑',name:'Squid',diet:'Deep-diving dolphins hunt squid at night using echolocation.'},{emoji:'🐙',name:'Octopus',diet:'Dolphins toss octopuses to remove tentacles before eating.'}]},
+      { emoji:'🦈', name:'Shark', latin:'Carcharodon carcharias', stars:5,
+        fact:'Sharks have <strong>electroreceptors</strong> that detect the heartbeat of prey buried in sand.',
+        goals:[{emoji:'🦭',name:'Seal',diet:'Great whites ambush seals from below in a high-speed vertical strike.'},{emoji:'🐟',name:'Tuna',diet:'Sharks can sustain 40 km/h to chase fast open-water fish like tuna.'},{emoji:'🦐',name:'Krill',diet:'Whale sharks, the largest fish, feed almost exclusively on tiny krill.'}]},
+      { emoji:'🐙', name:'Octopus', latin:'Octopus vulgaris', stars:4,
+        fact:'Octopuses have <strong>three hearts and blue blood</strong> — copper-based like antifreeze.',
+        goals:[{emoji:'🦀',name:'Crab',diet:'Octopuses drill through crab shells with a radula and inject paralysing saliva.'},{emoji:'🦞',name:'Lobster',diet:'Lobsters are ambushed and overpowered using all eight arms simultaneously.'},{emoji:'🐚',name:'Clam',diet:'Octopuses prise open clam shells by sustained suction-cup force.'}]},
+      { emoji:'🦭', name:'Seal', latin:'Phoca vitulina', stars:2,
+        fact:'Seals can dive to <strong>500 metres</strong> and hold their breath for 30 minutes.',
+        goals:[{emoji:'🐟',name:'Herring',diet:'Seals herd herring schools into shallow water to feed more efficiently.'},{emoji:'🦑',name:'Squid',diet:'Seals hunt squid at twilight when they rise to the surface to feed.'},{emoji:'🐠',name:'Flatfish',diet:'Harbour seals detect flatfish hidden in sand using sensitive whiskers.'}]},
+      { emoji:'🐳', name:'Whale', latin:'Balaenoptera musculus', stars:3,
+        fact:'Blue whales eat <strong>4 tonnes of krill per day</strong> — nearly 40 million individual animals.',
+        goals:[{emoji:'🦐',name:'Krill',diet:'A lunge-feeding gulp engulfs 500 tonnes of water, filtered through baleen plates.'},{emoji:'🐟',name:'Capelin',diet:'Humpbacks use bubble nets to herd fish into tight schools before lunging.'},{emoji:'🦑',name:'Squid',diet:'Sperm whales dive 2 km to hunt giant squid in complete darkness.'}]},
+      { emoji:'🐠', name:'Clownfish', latin:'Amphiprioninae', stars:1,
+        fact:'Clownfish are <strong>immune to anemone stings</strong> via a protective mucus coating.',
+        goals:[{emoji:'🦐',name:'Shrimp',diet:'Clownfish eat small shrimp and plankton near their host anemone.'},{emoji:'🪸',name:'Algae',diet:'Clownfish tend algae patches around the anemone, weeding out excess growth.'},{emoji:'🐛',name:'Copepods',diet:'Tiny copepods form the bulk of a clownfish\'s daily protein intake.'}]},
+    ]
+  },
+  {
+    id:'desert', name:'Desert', emoji:'🏜️',
+    desc:'Scorching days, freezing nights and endless silence. Only the toughest survive here — masters of patience and adaptation.',
+    color:'#2e1e08', border:'#503010', accent:'#f0a030',
+    bg:'#0e0804',
+    hexFills:{ idle:'#1a1004', neighbor:'#2a1e08', current:'#6a4818', visited:'#1a1004', goal:'#1a1004' },
+    hexStrokes:{ idle:'#2e1e0c', neighbor:'#7a5020', current:'#c08040', visited:'#4a3010', goal:'#2e1e0c' },
+    forestEmojis:['🌵','🌵','🪨','🌵','🏜️','🦎','🌵','🪨','🌾','🌵'],
+    animals:[
+      { emoji:'🦎', name:'Lizard', latin:'Varanus griseus', stars:1,
+        fact:'Desert monitors can <strong>sprint at 40 km/h</strong> and detect prey underground with their tongue.',
+        goals:[{emoji:'🐛',name:'Beetle',diet:'Desert beetles are hunted at dusk when they emerge to cool off on sand.'},{emoji:'🥚',name:'Bird Egg',diet:'Monitor lizards raid bird nests, swallowing eggs whole without breaking them.'},{emoji:'🐭',name:'Desert Mouse',diet:'Mice are ambushed near burrow entrances at dawn, detected by vibration.'}]},
+      { emoji:'🦂', name:'Scorpion', latin:'Androctonus australis', stars:3,
+        fact:'Scorpions <strong>glow blue-green under UV light</strong> — scientists still debate why.',
+        goals:[{emoji:'🪲',name:'Cricket',diet:'Crickets are the staple prey; scorpions detect their vibrations in sand.'},{emoji:'🕷️',name:'Spider',diet:'Larger scorpions hunt and eat spiders, using venom to subdue them quickly.'},{emoji:'🐛',name:'Larva',diet:'Soft larvae are easier to eat and provide moisture as well as nutrition.'}]},
+      { emoji:'🐪', name:'Camel', latin:'Camelus dromedarius', stars:1,
+        fact:'Camels store fat in their hump — <strong>not water</strong>. This fat releases water when metabolised.',
+        goals:[{emoji:'🌵',name:'Cactus',diet:'Camels eat thorny cacti without injury, using tough thick lips as protection.'},{emoji:'🌾',name:'Dry Grass',diet:'Camels can survive on dry, salt-tolerant plants completely avoided by other animals.'},{emoji:'🍃',name:'Desert Shrub',diet:'Camels travel over 60 km daily to find scattered shrubs and leaves.'}]},
+      { emoji:'🦅', name:'Eagle', latin:'Aquila chrysaetos', stars:4,
+        fact:'A golden eagle can spot a rabbit from <strong>3 kilometres</strong> and dive at 300 km/h.',
+        goals:[{emoji:'🐇',name:'Hare',diet:'Desert hares are ambushed mid-bound from a steep high-speed dive.'},{emoji:'🦎',name:'Lizard',diet:'Eagles hunt lizards basking on hot rocks at forest and desert edges.'},{emoji:'🐍',name:'Snake',diet:'Eagles are one of the few predators that regularly hunt venomous snakes.'}]},
+      { emoji:'🐍', name:'Snake', latin:'Crotalus cerastes', stars:5,
+        fact:'Sidewinder rattlesnakes move in an <strong>S-wave sideways gait</strong> to travel on loose sand.',
+        goals:[{emoji:'🐭',name:'Desert Mouse',diet:'Mice are ambushed at night; pit organs detect body heat in total darkness.'},{emoji:'🦎',name:'Lizard',diet:'Fast-moving lizards are struck with lightning speed and then tracked by scent.'},{emoji:'🥚',name:'Bird Egg',diet:'Egg-eating snakes swallow eggs whole and crack the shell using spine projections.'}]},
+      { emoji:'🦊', name:'Fennec Fox', latin:'Vulpes zerda', stars:2,
+        fact:'Fennec fox ears can be <strong>15 cm long</strong> — used to radiate heat and hear underground prey.',
+        goals:[{emoji:'🐛',name:'Beetle',diet:'Fennec foxes dig frantically to reach beetles heard moving underground.'},{emoji:'🌵',name:'Cactus Fruit',diet:'Fruit from desert cacti provides crucial moisture as well as sugar.'},{emoji:'🐭',name:'Desert Mouse',diet:'Fennec foxes hunt mice at night using enormous ears to pinpoint movement.'}]},
+    ]
+  },
+  {
+    id:'arctic', name:'Arctic', emoji:'❄️',
+    desc:'A frozen world of ice and twilight. Life here is stripped to its essentials — every adaptation a marvel of evolution.',
+    color:'#0a1828', border:'#183040', accent:'#80d8f8',
+    bg:'#04080e',
+    hexFills:{ idle:'#060c14', neighbor:'#0c1a28', current:'#304060', visited:'#060c14', goal:'#060c14' },
+    hexStrokes:{ idle:'#0e1a28', neighbor:'#2858a0', current:'#5090c0', visited:'#1a3050', goal:'#0e1a28' },
+    forestEmojis:['🧊','❄️','🌨️','🪨','💧','🌊','❄️','🪨','🧊','🌬️'],
+    animals:[
+      { emoji:'🐻‍❄️', name:'Polar Bear', latin:'Ursus maritimus', stars:4,
+        fact:'Polar bear fur is <strong>hollow and transparent</strong>, channelling UV light to black skin beneath.',
+        goals:[{emoji:'🦭',name:'Seal',diet:'Polar bears wait motionless at breathing holes, ambushing seals as they surface.'},{emoji:'🐟',name:'Arctic Char',diet:'After sea ice melts, polar bears turn to fish in shallow rivers and streams.'},{emoji:'🥚',name:'Bird Egg',diet:'In summer polar bears raid bird colonies, eating eggs and chicks on tundra.'}]},
+      { emoji:'🦭', name:'Walrus', latin:'Odobenus rosmarus', stars:3,
+        fact:'Walrus tusks can reach <strong>1 metre long</strong> and are used to haul onto ice, not to hunt.',
+        goals:[{emoji:'🦪',name:'Clam',diet:'Walruses use powerful suction to extract clam meat, consuming 50 kg per day.'},{emoji:'🦐',name:'Shrimp',diet:'Bottom-feeding walruses sieve shrimp and worms from Arctic seafloor sediment.'},{emoji:'🐙',name:'Octopus',diet:'Octopus is an occasional prey — hunted when clams are scarce under ice.'}]},
+      { emoji:'🦊', name:'Arctic Fox', latin:'Vulpes lagopus', stars:1,
+        fact:'The arctic fox changes from <strong>white in winter to brown in summer</strong> in just weeks.',
+        goals:[{emoji:'🐭',name:'Lemming',diet:'Lemmings are the primary prey; arctic foxes can detect them under 80 cm of snow.'},{emoji:'🥚',name:'Bird Egg',diet:'In summer, foxes raid nesting colonies and cache surplus eggs for winter.'},{emoji:'🐟',name:'Arctic Fish',diet:'Foxes follow polar bears and eat fish scraps left at seal kill sites.'}]},
+      { emoji:'🦉', name:'Snowy Owl', latin:'Bubo scandiacus', stars:2,
+        fact:'Snowy owls can locate prey under <strong>30 cm of snow</strong> using asymmetric ears.',
+        goals:[{emoji:'🐭',name:'Lemming',diet:'One snowy owl can eat over 1,600 lemmings in a single year.'},{emoji:'🐇',name:'Arctic Hare',diet:'Owls silently ambush hares from above, using their wingspan of 1.5 metres.'},{emoji:'🐦',name:'Ptarmigan',diet:'When lemmings are scarce, snowy owls hunt ptarmigan in low swooping flight.'}]},
+      { emoji:'🐋', name:'Orca', latin:'Orcinus orca', stars:5,
+        fact:'Orcas have <strong>distinct dialects</strong> — pods in the same area speak different click languages.',
+        goals:[{emoji:'🦭',name:'Seal',diet:'Orcas wave-wash ice floes to knock seals into the water — a learned technique.'},{emoji:'🐟',name:'Salmon',diet:'Some orca populations eat only fish, using cooperative herding strategies.'},{emoji:'🐋',name:'Baby Whale',diet:'Transient orcas hunt whale calves, separating them from mothers over hours.'}]},
+    ]
+  },
+  {
+    id:'savanna', name:'Savanna', emoji:'🌅',
+    desc:'Golden grasslands stretching to the horizon. The stage for nature\'s greatest dramas — predator and prey in open view.',
+    color:'#2e2008', border:'#503010', accent:'#f0a830',
+    bg:'#0a0804',
+    hexFills:{ idle:'#1a1204', neighbor:'#2a1e08', current:'#604820', visited:'#1a1204', goal:'#1a1204' },
+    hexStrokes:{ idle:'#2e1e0c', neighbor:'#806020', current:'#c09040', visited:'#3a2c10', goal:'#2e1e0c' },
+    forestEmojis:['🌾','🌾','🪨','🌿','🌾','🌵','🍃','🌾','🪨','🌾'],
+    animals:[
+      { emoji:'🦁', name:'Lion', latin:'Panthera leo', stars:3,
+        fact:'A lion\'s roar can be heard <strong>8 kilometres away</strong> and serves to mark territory.',
+        goals:[{emoji:'🦓',name:'Zebra',diet:'Lions coordinate ambushes, with females doing most of the hunting at dusk.'},{emoji:'🦒',name:'Wildebeest',diet:'Wildebeest migrations provide predictable prey — lions follow the herds.'},{emoji:'🐗',name:'Warthog',diet:'Warthogs are caught near water holes where they kneel to drink, exposing the neck.'}]},
+      { emoji:'🐆', name:'Cheetah', latin:'Acinonyx jubatus', stars:5,
+        fact:'The cheetah reaches <strong>112 km/h in 3 seconds</strong> — faster than most sports cars.',
+        goals:[{emoji:'🦌',name:'Impala',diet:'Impalas are the cheetah\'s favourite prey — a single burst covers 500 metres.'},{emoji:'🐇',name:'Hare',diet:'Young cheetahs learn to hunt by catching hares — small, fast, and reactive.'},{emoji:'🐦',name:'Francolin',diet:'Ground birds are caught with a swipe of the paw before they can take flight.'}]},
+      { emoji:'🦒', name:'Giraffe', latin:'Giraffa camelopardalis', stars:1,
+        fact:'Giraffes sleep only <strong>30 minutes per day</strong> in short 5-minute bursts.',
+        goals:[{emoji:'🍃',name:'Acacia Leaves',diet:'Giraffes strip acacia leaves with a 45 cm purple tongue, ignoring thorns.'},{emoji:'🌸',name:'Flowers',diet:'Seasonal flowers provide rare nutrients and water in the dry season.'},{emoji:'🍎',name:'Wild Fruit',diet:'Giraffes eat fallen fruit in rainy season when savanna trees are productive.'}]},
+      { emoji:'🐘', name:'Elephant', latin:'Loxodonta africana', stars:2,
+        fact:'Elephants <strong>mourn their dead</strong>, returning to bones and touching them with their trunks.',
+        goals:[{emoji:'🌾',name:'Grass',diet:'Elephants eat 150–200 kg of grass and vegetation every single day.'},{emoji:'🍌',name:'Wild Banana',diet:'Elephants smell ripe fruit from far and strip banana plants with their trunks.'},{emoji:'🌿',name:'Bark & Roots',diet:'Elephants strip bark from trees for minerals and dig roots up with their tusks.'}]},
+      { emoji:'🦓', name:'Zebra', latin:'Equus quagga', stars:1,
+        fact:"No two zebras have the same stripe pattern — it's as unique as a fingerprint.",
+        goals:[{emoji:'🌾',name:'Savanna Grass',diet:'Zebras are grazers, eating tall coarse grass that wildebeest won\'t touch.'},{emoji:'🌿',name:'Shrub Leaves',diet:'In the dry season, zebras browse on leaves and shrubs when grass is sparse.'},{emoji:'💧',name:'Water Plants',diet:'Zebras gather near rivers to eat water-edge vegetation and drink daily.'}]},
+      { emoji:'🐊', name:'Crocodile', latin:'Crocodylus niloticus', stars:4,
+        fact:'Crocodiles have been <strong>unchanged for 200 million years</strong> — older than the dinosaurs.',
+        goals:[{emoji:'🦓',name:'Zebra',diet:'Crocodiles ambush zebras and wildebeest at river crossings during migration.'},{emoji:'🐟',name:'Catfish',diet:'Fish are the daily staple; crocodiles herd them into shallows with their body.'},{emoji:'🦢',name:'Bird',diet:'Waterbirds are snatched from the surface with explosive lateral lunges.'}]},
+    ]
+  },
+  {
+    id:'jungle', name:'Jungle', emoji:'🌴',
+    desc:'The most biodiverse place on Earth. Every layer of this steaming canopy hides a different world of colour and noise.',
+    color:'#0e2810', border:'#1a4820', accent:'#50e080',
+    bg:'#030e04',
+    hexFills:{ idle:'#081408', neighbor:'#0e2810', current:'#286040', visited:'#081408', goal:'#081408' },
+    hexStrokes:{ idle:'#102014', neighbor:'#288040', current:'#40a860', visited:'#184828', goal:'#102014' },
+    forestEmojis:['🌴','🌴','🌿','🌺','🌴','🪷','🍃','🐦','🌿','🌺'],
+    animals:[
+      { emoji:'🐒', name:'Monkey', latin:'Alouatta seniculus', stars:3,
+        fact:'Howler monkeys produce calls louder than <strong>140 decibels</strong> — the loudest land animal.',
+        goals:[{emoji:'🍌',name:'Banana',diet:'Monkeys peel bananas with their hands and feet while hanging from branches.'},{emoji:'🍓',name:'Wild Fruit',diet:'Fruit makes up 70% of the diet — monkeys are key seed dispersers in jungles.'},{emoji:'🌿',name:'Young Leaves',diet:'When fruit is scarce, monkeys eat young leaves, insects and bird eggs.'}]},
+      { emoji:'🐆', name:'Jaguar', latin:'Panthera onca', stars:4,
+        fact:'The jaguar kills with a <strong>skull-crushing bite</strong> — the most powerful bite of any big cat.',
+        goals:[{emoji:'🐊',name:'Caiman',diet:'Jaguars wade rivers to ambush caimans, biting through the skull directly.'},{emoji:'🐢',name:'Turtle',diet:'Jaguars flip turtles on their back and scoop out the flesh with a paw.'},{emoji:'🐟',name:'River Fish',diet:'Jaguars sit on riverbanks and flick fish out of the water with their paws.'}]},
+      { emoji:'🦜', name:'Parrot', latin:'Ara macao', stars:1,
+        fact:'Parrots understand <strong>cause and effect</strong> — some can use tools and solve multi-step puzzles.',
+        goals:[{emoji:'🌰',name:'Brazil Nut',diet:'Parrots crack impossibly hard brazil nuts with beaks exerting 300+ kg of force.'},{emoji:'🌸',name:'Flower Nectar',diet:'Lories have brush-tipped tongues specially adapted for lapping flower nectar.'},{emoji:'🫐',name:'Wild Berry',diet:'Berries are eaten whole; seeds pass through undigested, dispersing the plant.'}]},
+      { emoji:'🐸', name:'Tree Frog', latin:'Agalychnis callidryas', stars:2,
+        fact:'Red-eyed tree frogs have <strong>adhesive toe pads</strong> that can support 14× their body weight.',
+        goals:[{emoji:'🦟',name:'Mosquito',diet:'Tree frogs catch mosquitoes mid-flight using their sticky extendable tongue.'},{emoji:'🦗',name:'Cricket',diet:'Crickets are the staple prey, hunted in the canopy layer after dark.'},{emoji:'🪲',name:'Beetle',diet:'Beetles provide armour-plated crunchy protein — swallowed head-first.'}]},
+      { emoji:'🦥', name:'Sloth', latin:'Bradypus tridactylus', stars:1,
+        fact:'Sloths move so slowly that <strong>algae grows on their fur</strong>, providing extra camouflage.',
+        goals:[{emoji:'🍃',name:'Cecropia Leaf',diet:'Sloths eat mostly cecropia leaves — so low in nutrition that they sleep 20 hrs a day.'},{emoji:'🌸',name:'Flower',diet:'Flowers provide rare carbohydrates; sloths descend once a week for special plants.'},{emoji:'🌿',name:'Tender Shoot',diet:'Young shoots have higher protein and are sought out during the rainy season.'}]},
+      { emoji:'🐍', name:'Anaconda', latin:'Eunectes murinus', stars:5,
+        fact:'The green anaconda is the <strong>heaviest snake on Earth</strong> — up to 250 kg.',
+        goals:[{emoji:'🐊',name:'Caiman',diet:'Anacondas coil around caimans and constrict, then swallow whole over hours.'},{emoji:'🦌',name:'Deer',diet:'Large deer and capybara are ambushed at river edges and drowned before eating.'},{emoji:'🐟',name:'River Fish',diet:'Anacondas hunt fish by coiling in shallows and striking when fish pass close.'}]},
+    ]
+  },
+];
+
+// ═══════════════════════════════════════════
+//  PREHISTORIC BIOME
+// ═══════════════════════════════════════════
+const PREHISTORIC_BIOME = {
+  id:'prehistoric', name:'Prehistoric', emoji:'🌋',
+  desc:'A world lost to time. Ancient giants roam volcanic plains — survive before extinction claims you.',
+  color:'#2a1206', border:'#6a3010', accent:'#f07000',
+  bg:'#0e0604',
+  hexFills:{ idle:'#1a0a04', neighbor:'#2e1208', current:'#6a3010', visited:'#1a0a04', goal:'#1a0a04' },
+  hexStrokes:{ idle:'#3a1808', neighbor:'#8a4018', current:'#d07030', visited:'#4a2010', goal:'#3a1808' },
+  forestEmojis:['🦕','🦖','🌋','🪨','🦴','🌿','🌋','🪨','🦕','🌿'],
+  prehistoric: true,
+  animals:[
+    { emoji:'🦣', name:'Mammoth', latin:'Mammuthus primigenius', stars:5,
+      countdown: 180,
+      relic: { emoji:'💀', name:'Human Skull', desc:'Humans hunted the mammoth. The mammoth is gone — you found what\'s left of the hunter.' },
+      fact:'Woolly mammoths had <strong>curved tusks up to 4 metres long</strong>, used to sweep snow and fight rivals.',
+      goals:[
+        {emoji:'🌾',name:'Grass',diet:'Mammoths grazed on tundra grasses, using their tusks to sweep away deep snow to reach vegetation beneath.'},
+        {emoji:'🌿',name:'Shrub',diet:'Woody shrubs and tundra plants provided vital roughage and minerals during the long Ice Age winters.'},
+        {emoji:'🍃',name:'Tree Leaves',diet:'In warmer months mammoths browsed on leaves and bark, travelling vast distances across the tundra.'}
+      ]
+    },
+    { emoji:'🦕', name:'Brachiosaurus', latin:'Brachiosaurus altithorax', stars:5,
+      countdown: 150,
+      relic: { emoji:'🐚', name:'Ancient Shell', desc:'A shell older than memory, preserved in ancient rock for millions of years.' },
+      fact:'Brachiosaurus could reach <strong>13 metres high</strong> — the height of a four-storey building.',
+      goals:[
+        {emoji:'🌲',name:'Conifer',diet:'Brachiosaurus browsed the tops of tall conifers, stripping needles and branches with peg-like teeth.'},
+        {emoji:'🌿',name:'Fern',diet:'Ground ferns were consumed in vast quantities — a single day\'s feeding covered several square kilometres.'},
+        {emoji:'🍃',name:'Tree Leaves',diet:'Broad leaves at the canopy top were the preferred food, reached by an enormously elongated neck.'}
+      ]
+    },
+    { emoji:'🦖', name:'T-Rex', latin:'Tyrannosaurus rex', stars:5,
+      countdown: 60,
+      relic: { emoji:'💎', name:'Ancient Crystal', desc:'Deep in the earth where T-Rex once hunted, pressure and time forged this crystal over 65 million years.' },
+      fact:'T-Rex had a bite force of <strong>35,000 newtons</strong> — enough to crush bone like chalk.',
+      goals:[
+        {emoji:'🦴',name:'Bone',diet:'T-Rex scavenged carcasses and crushed bones completely — scientists now believe it was partly a scavenger.'},
+        {emoji:'🥩',name:'Carcass Meat',diet:'Rotting carcasses were tracked by smell across vast distances; T-Rex\'s sense of smell rivalled modern vultures.'},
+        {emoji:'🥚',name:'Egg',diet:'T-Rex raided nests of other dinosaurs, consuming eggs for a concentrated source of protein and fat.'}
+      ]
+    },
+  ]
+};
+
+// Relics storage key
+const RELICS_KEY = 'wm_relics';
+function loadRelics(){ try{ return JSON.parse(localStorage.getItem(RELICS_KEY)||'[]'); }catch{ return []; } }
+function saveRelics(r){ try{ localStorage.setItem(RELICS_KEY,JSON.stringify(r)); }catch{} }
+function hasRelic(animalEmoji){ return loadRelics().includes(animalEmoji); }
+function unlockRelic(animalEmoji){ const r=loadRelics(); if(!r.includes(animalEmoji)){r.push(animalEmoji);saveRelics(r);} }
+
+const UNLOCK_KEY = 'wm_prehistoric_unlocked';
+function isPrehistoricUnlocked(){ return localStorage.getItem(UNLOCK_KEY)==='1'; }
+function unlockPrehistoric(){
+  localStorage.setItem(UNLOCK_KEY,'1');
+  // Fire achievement (checkAchievements will pick it up on next call, but force it now too)
+  if (!hasAchievement('prehistoric_unlock')) {
+    const a = unlockAchievement('prehistoric_unlock');
+    if (a) updateAchMenuCounter();
+  }
+}
+
+const TIER_KEY = 'wm_tier';
+function loadTier(){ return parseInt(localStorage.getItem(TIER_KEY)||'1'); }
+function saveTier(t){ localStorage.setItem(TIER_KEY, String(t)); }
+function getAnimalsAtTier(t){
+  return BIOMES.flatMap(b => b.animals.filter(a => a.stars === t));
+}
+
+// ═══════════════════════════════════════════
+//  ACHIEVEMENTS SYSTEM
+// ═══════════════════════════════════════════
+
+// Diet classification for all main-biome animals
+const DIET = {
+  // Carnivores
+  '🦊':'carnivore','🐻':'carnivore','🐺':'carnivore',
+  '🦈':'carnivore','🐙':'carnivore',
+  '🦂':'carnivore','🦅':'carnivore','🐍':'carnivore',
+  '🐻‍❄️':'carnivore','🐋':'carnivore','🦉':'carnivore','🦊':'carnivore',
+  '🦁':'carnivore','🐆':'carnivore','🐊':'carnivore',
+  '🐆':'carnivore','🐍':'carnivore','🐸':'carnivore',
+  // Herbivores
+  '🐇':'herbivore','🦌':'herbivore','🐿️':'herbivore',
+  '🐪':'herbivore','🦒':'herbivore','🦓':'herbivore','🐘':'herbivore',
+  '🦥':'herbivore','🦣':'herbivore','🦕':'herbivore',
+  // Omnivores
+  '🦔':'omnivore','🦡':'omnivore',
+  '🐬':'omnivore','🦭':'omnivore','🦭':'omnivore','🐠':'omnivore','🐳':'omnivore',
+  '🦎':'omnivore','🦊':'omnivore',
+  '🐒':'omnivore','🦜':'omnivore','🐸':'omnivore',
+  '🦤':'omnivore',
+};
+
+// More precise diet map keyed by emoji+name to avoid duplicates (🦊 appears twice, 🐆 twice, 🐍 twice)
+const DIET_MAP = {
+  // Forest
+  'Fox':'carnivore','Rabbit':'herbivore','Hedgehog':'omnivore','Squirrel':'omnivore',
+  'Deer':'herbivore','Bear':'omnivore','Badger':'omnivore','Wolf':'carnivore',
+  // Ocean
+  'Dolphin':'omnivore','Shark':'carnivore','Octopus':'carnivore','Seal':'carnivore',
+  'Whale':'carnivore','Clownfish':'omnivore',
+  // Desert
+  'Lizard':'omnivore','Scorpion':'carnivore','Camel':'herbivore','Eagle':'carnivore',
+  'Snake':'carnivore','Fennec Fox':'omnivore',
+  // Arctic
+  'Polar Bear':'carnivore','Walrus':'carnivore','Arctic Fox':'omnivore',
+  'Snowy Owl':'carnivore','Orca':'carnivore',
+  // Savanna
+  'Lion':'carnivore','Cheetah':'carnivore','Giraffe':'herbivore','Elephant':'herbivore',
+  'Zebra':'herbivore','Crocodile':'carnivore',
+  // Jungle
+  'Monkey':'omnivore','Jaguar':'carnivore','Parrot':'omnivore','Tree Frog':'carnivore',
+  'Sloth':'herbivore','Anaconda':'carnivore',
+};
+
+// All main-biome animals flat list
+function getAllMainAnimals() {
+  return BIOMES.flatMap(b => b.animals);
+}
+function getCarnivores(){ return getAllMainAnimals().filter(a => DIET_MAP[a.name]==='carnivore'); }
+function getHerbivores(){ return getAllMainAnimals().filter(a => DIET_MAP[a.name]==='herbivore'); }
+function getOmnivores() { return getAllMainAnimals().filter(a => DIET_MAP[a.name]==='omnivore');  }
+
+// Achievement definitions
+// secret:true = hidden until relevant biome unlocked
+const ACHIEVEMENTS = [
+  { id:'first_win',       icon:'🐾', name:'First Steps',         desc:'Win your very first game.' },
+  { id:'all_forest',      icon:'🌲', name:'Forest Ranger',       desc:'Win with every Forest animal.' },
+  { id:'all_ocean',       icon:'🌊', name:'Ocean Explorer',      desc:'Win with every Ocean animal.' },
+  { id:'all_desert',      icon:'🏜️', name:'Desert Survivor',     desc:'Win with every Desert animal.' },
+  { id:'all_arctic',      icon:'❄️', name:'Ice Walker',          desc:'Win with every Arctic animal.' },
+  { id:'all_savanna',     icon:'🌅', name:'Savanna Wanderer',    desc:'Win with every Savanna animal.' },
+  { id:'all_jungle',      icon:'🌴', name:'Jungle Master',       desc:'Win with every Jungle animal.' },
+  { id:'all_biomes',      icon:'🌍', name:'World Tamer',         desc:'Win with every animal in all 6 biomes.' },
+  { id:'all_carnivores',  icon:'🥩', name:'Apex Predator',       desc:'Win with all carnivore animals.' },
+  { id:'all_herbivores',  icon:'🌿', name:'Gentle Grazer',       desc:'Win with all herbivore animals.' },
+  { id:'all_omnivores',   icon:'🍽️', name:'True Omnivore',       desc:'Win with all omnivore animals.' },
+  { id:'eggs_3',          icon:'🥚', name:'Egg Hunter',          desc:'Collect 3 egg foods in your Finds.' },
+  { id:'mushroom_3',      icon:'🍄', name:'Fungi Forager',       desc:'Collect 3 mushroom foods in your Finds.' },
+  { id:'fish_5',          icon:'🐟', name:'Gone Fishing',        desc:'Collect 5 fish foods in your Finds.' },
+  { id:'herbs_5',         icon:'🌿', name:'Herb Gatherer',       desc:'Collect 5 herb, grass or leaf foods in your Finds.' },
+  { id:'bugs_5',          icon:'🐛', name:'Bug Collector',       desc:'Collect 5 bug or insect foods in your Finds.' },
+  { id:'berries_4',       icon:'🫐', name:'Berry Picker',        desc:'Collect 4 berry, fruit or flower foods in your Finds.' },
+  { id:'seafood_5',       icon:'🦐', name:'Seafood Lover',       desc:'Collect 5 seafood foods in your Finds.' },
+  { id:'smallgame_3',     icon:'🐭', name:'Small Game Hunter',   desc:'Collect 3 small prey foods in your Finds.' },
+  { id:'flawless',        icon:'❤️', name:'Flawless',            desc:'Win a game with zero errors.' },
+  { id:'fog_flawless',    icon:'🌫️', name:'Through the Fog',     desc:'Win a Fog game with zero errors.' },
+  { id:'speed_30',        icon:'⚡', name:'Speed Demon',         desc:'Complete a game in under 30 seconds.' },
+  { id:'survivor',        icon:'💀', name:'Survivor',            desc:'Win after losing all 3 lives (0 lives left).' },
+  { id:'naturalist',      icon:'🔬', name:'Naturalist',          desc:'Collect 30 different finds.' },
+  { id:'champion',        icon:'🏆', name:'Champion',            desc:'Reach a score of 10,000 or more.' },
+  { id:'ability_user',    icon:'🤖', name:'Ability User',        desc:'Use each of the 3 ability types at least once.' },
+  { id:'prehistoric_unlock', icon:'🌋', name:'Time Traveller',   desc:'Unlock the Prehistoric biome.', secret:'prehistoric' },
+  { id:'all_prehistoric', icon:'🦖', name:'Prehistoric Master',  desc:'Win with all 3 Prehistoric animals.', secret:'prehistoric' },
+  { id:'all_relics',      icon:'💎', name:'Relic Collector',     desc:'Collect all 3 ancient relics.', secret:'prehistoric' },
+  { id:'dragon_slayer',   icon:'🐉', name:'Dragon Slayer',       desc:'Win the Dragon Race.', secret:'dragon' },
+  { id:'all_dragon',      icon:'🔥', name:'Dragon Tamer',        desc:'Win the Dragon Race with every Dragon animal.', secret:'dragon' },
+];
+
+const ACH_KEY = 'wm_achievements';
+const ACH_ABILITIES_KEY = 'wm_ach_abilities_used';
+
+function loadAchievements(){ try{ return JSON.parse(localStorage.getItem(ACH_KEY)||'{}'); }catch{ return {}; } }
+function saveAchievements(obj){ try{ localStorage.setItem(ACH_KEY, JSON.stringify(obj)); }catch{} }
+function hasAchievement(id){ return !!loadAchievements()[id]; }
+
+function unlockAchievement(id) {
+  const obj = loadAchievements();
+  if (obj[id]) return null; // already unlocked
+  obj[id] = Date.now();
+  saveAchievements(obj);
+  return ACHIEVEMENTS.find(a => a.id === id);
+}
+
+function trackAbilityUsed(type) {
+  try {
+    const used = JSON.parse(localStorage.getItem(ACH_ABILITIES_KEY)||'[]');
+    if (!used.includes(type)) {
+      used.push(type);
+      localStorage.setItem(ACH_ABILITIES_KEY, JSON.stringify(used));
+    }
+  } catch{}
+}
+
+function loadAbilitiesUsed() {
+  try { return JSON.parse(localStorage.getItem(ACH_ABILITIES_KEY)||'[]'); } catch { return []; }
+}
+
+// Check all achievements after a win and return array of newly unlocked ones
+function checkAchievements({ isPrehistoric, isDragon } = {}) {
+  const newlyUnlocked = [];
+  const wins = foodCollected; // each win adds an entry
+  const allMain = getAllMainAnimals();
+
+  function check(id, condition) {
+    if (!hasAchievement(id) && condition) {
+      const a = unlockAchievement(id);
+      if (a) newlyUnlocked.push(a);
+    }
+  }
+
+  // Helper: has the player ever won with this animal (by emoji+name)
+  function wonWith(animal) {
+    return wins.some(w => w.animal === animal.emoji && w.animalName === animal.name);
+  }
+
+  // First win
+  check('first_win', wins.length >= 1);
+
+  // All per-biome
+  BIOMES.forEach(b => {
+    const achId = 'all_' + b.id;
+    check(achId, b.animals.every(a => wonWith(a)));
+  });
+
+  // All biomes
+  check('all_biomes', allMain.every(a => wonWith(a)));
+
+  // Diet-based
+  check('all_carnivores', getCarnivores().every(a => wonWith(a)));
+  check('all_herbivores', getHerbivores().every(a => wonWith(a)));
+  check('all_omnivores',  getOmnivores().every(a => wonWith(a)));
+
+  // Food type counts
+  const eggCount = wins.filter(w => w.food === '🥚').length;
+  const mushCount = wins.filter(w => w.food === '🍄').length;
+  const fishCount    = wins.filter(w => w.food === '🐟').length;
+  const herbCount    = wins.filter(w => ['🌿','🌾','🍃','🌱'].includes(w.food)).length;
+  const bugCount     = wins.filter(w => ['🐛','🐞','🪲','🦟','🦗','🐜','🕷️'].includes(w.food)).length;
+  const berryCount   = wins.filter(w => ['🫐','🍎','🍌','🍓','🌸','🌼'].includes(w.food)).length;
+  const seafoodCount = wins.filter(w => ['🦐','🦑','🦞','🦀','🦪','🐙','🐚'].includes(w.food)).length;
+  const smallCount   = wins.filter(w => ['🐭','🐁','🐇'].includes(w.food)).length;
+  check('eggs_3',      eggCount >= 3);
+  check('mushroom_3',  mushCount >= 3);
+  check('fish_5',      fishCount >= 5);
+  check('herbs_5',     herbCount >= 5);
+  check('bugs_5',      bugCount >= 5);
+  check('berries_4',   berryCount >= 4);
+  check('seafood_5',   seafoodCount >= 5);
+  check('smallgame_3', smallCount >= 3);
+
+  // Skill
+  check('flawless',     !isPrehistoric && !isDragon && stepErrors === 0 && currentStep > 0);
+  check('fog_flawless', !isPrehistoric && !isDragon && stepErrors === 0 && fogOccurred);
+  check('speed_30',  !isPrehistoric && elapsedMs > 0 && elapsedMs < 30000);
+  check('survivor',  !isPrehistoric && stepErrors >= 3 && currentStep === path.length - 1);
+
+  // Collection
+  check('naturalist', wins.length >= 30);
+  check('champion',   best.score >= 10000);
+
+  // Abilities
+  check('ability_user', loadAbilitiesUsed().length >= 3);
+
+  // Prehistoric (secret)
+  check('prehistoric_unlock', isPrehistoricUnlocked());
+  check('all_relics', loadRelics().length >= 3);
+  if (isPrehistoric) {
+    const allPre = PREHISTORIC_BIOME.animals.every(a =>
+      wins.some(w => w.animal === a.emoji && w.animalName === a.name)
+    );
+    check('all_prehistoric', allPre);
+  }
+
+  // Dragon (secret)
+  if (isDragon) {
+    check('dragon_slayer', true);
+    const allDrag = DRAGON_RACE_ANIMALS.every(a =>
+      wins.some(w => w.animal === a.emoji && w.animalName === a.name && w.biomeName === 'Dragon Race')
+    );
+    check('all_dragon', allDrag);
+  }
+
+  return newlyUnlocked;
+}
+
+function renderAchievementsInWinCard(newlyUnlocked, containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  if (!newlyUnlocked || !newlyUnlocked.length) {
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '6px';
+  container.innerHTML = '';
+  newlyUnlocked.forEach(a => {
+    const div = document.createElement('div');
+    div.className = 'ach-win-notif';
+    div.innerHTML = `
+      <div class="ach-win-notif-icon">${a.icon}</div>
+      <div class="ach-win-notif-text">
+        <strong>${a.name}</strong>
+        <span>${a.desc}</span>
+      </div>
+      <div class="ach-win-badge">New achievement!</div>`;
+    container.appendChild(div);
+  });
+}
+
+function showAchievements() {
+  const obj = loadAchievements();
+  const total = ACHIEVEMENTS.length;
+  const earned = Object.keys(obj).length;
+  document.getElementById('ach-counter').textContent = `${earned} / ${total}`;
+
+  const prehistoricUnlocked = isPrehistoricUnlocked();
+  const dragonUnlocked = hasDragonBadge() || (loadRelics && loadRelics().length > 0);
+
+  // Sort: earned first, then locked visible, then secret
+  const sorted = [...ACHIEVEMENTS].sort((a, b) => {
+    const ae = !!obj[a.id], be = !!obj[b.id];
+    if (ae && !be) return -1;
+    if (!ae && be) return 1;
+    return 0;
+  });
+
+  const list = document.getElementById('ach-list');
+  list.innerHTML = '';
+  sorted.forEach(a => {
+    const earned2 = !!obj[a.id];
+    const isSecretPre = a.secret === 'prehistoric' && !prehistoricUnlocked && !earned2;
+    const isSecretDrag = a.secret === 'dragon' && !dragonUnlocked && !earned2;
+    const isSecret = isSecretPre || isSecretDrag;
+
+    const row = document.createElement('div');
+    if (earned2) row.className = 'ach-row earned';
+    else if (isSecret) row.className = 'ach-row secret-locked';
+    else row.className = 'ach-row locked';
+
+    let icon = isSecret ? '❓' : a.icon;
+    let name = isSecret ? '???' : a.name;
+    let desc = isSecret ? 'Keep exploring to reveal this achievement.' : a.desc;
+    let dateStr = '';
+    if (earned2 && obj[a.id]) {
+      const d = new Date(obj[a.id]);
+      dateStr = `<div class="ach-date">Achieved ${d.toLocaleDateString()}</div>`;
+    }
+
+    row.innerHTML = `
+      <div class="ach-icon">${icon}</div>
+      <div class="ach-body">
+        <div class="ach-name">${name}</div>
+        <div class="ach-desc">${desc}</div>
+        ${dateStr}
+      </div>`;
+    list.appendChild(row);
+  });
+
+  document.getElementById('achievements-overlay').classList.add('show');
+  updateAchMenuCounter();
+}
+
+function updateAchMenuCounter() {
+  const obj = loadAchievements();
+  const earned = Object.keys(obj).length;
+  const total = ACHIEVEMENTS.length;
+  const el = document.getElementById('ach-menu-counter');
+  if (el) el.textContent = earned > 0 ? `${earned}/${total}` : '';
+}
+
+// ═══════════════════════════════════════════
+//  DRAGON RACE
+// ═══════════════════════════════════════════
+const DRAGON_RACE_ANIMALS = [
+  { emoji:'🐅', name:'Tiger',    latin:'Panthera tigris',       stars:5, fact:'Tigers can leap <strong>10 metres</strong> in a single bound and swim across wide rivers.', goals:[{emoji:'🍖',name:'Meat',diet:'Tigers are solitary ambush predators, stalking prey silently before a powerful leap.'},{emoji:'🐗',name:'Boar',diet:'Wild boar is a tiger\'s preferred prey — hunted at dusk through dense undergrowth.'},{emoji:'🦌',name:'Deer',diet:'Deer are hunted at watering holes where tigers wait patiently for hours.'}] },
+  { emoji:'🦘', name:'Kangaroo', latin:'Macropus rufus',         stars:5, fact:'Kangaroos can reach <strong>70 km/h</strong> and never move backwards.', goals:[{emoji:'🌿',name:'Shrub',diet:'Red kangaroos graze on shrubs and dry grasses across vast Australian outback plains.'},{emoji:'🌾',name:'Grass',diet:'Kangaroos are grazers, feeding at dawn and dusk when temperatures are cooler.'},{emoji:'🍃',name:'Leaves',diet:'Kangaroos select the most nutritious leaves, covering many kilometres each night.'}] },
+  { emoji:'🦦', name:'Otter',    latin:'Lutra lutra',            stars:5, fact:'Otters hold hands while sleeping so they don\'t drift apart — called a <strong>raft</strong>.', goals:[{emoji:'🐟',name:'Fish',diet:'Otters catch fish by chasing them underwater, eating up to 15% of their body weight daily.'},{emoji:'🦀',name:'Crab',diet:'River crabs are cracked open on a stone balanced on the otter\'s chest while floating.'},{emoji:'🐚',name:'Shell',diet:'Sea otters dive to 40 metres to collect shellfish, storing them in their armpit pouches.'}] },
+  { emoji:'🦬', name:'Bison',    latin:'Bison bison',            stars:5, fact:'Bison herds once numbered <strong>60 million</strong> and their migration shook the ground.', goals:[{emoji:'🌾',name:'Grass',diet:'Bison graze continuously, using their massive heads to sweep snow aside in winter.'},{emoji:'🌿',name:'Shrub',diet:'Woody shrubs supplement the bison\'s diet when grasses are scarce in dry seasons.'},{emoji:'🍃',name:'Sedge',diet:'Sedge grasses near rivers are a bison delicacy, sought out during summer migrations.'}] },
+  { emoji:'🦩', name:'Flamingo', latin:'Phoenicopterus roseus',  stars:5, fact:'Flamingos are pink because of the <strong>algae and shrimp</strong> they eat — born white.', goals:[{emoji:'🦐',name:'Shrimp',diet:'Flamingos filter thousands of tiny shrimp per day through their specialised upside-down beaks.'},{emoji:'🌿',name:'Algae',diet:'Blue-green algae in soda lakes is highly toxic to most animals — flamingos thrive on it.'},{emoji:'🥚',name:'Egg',diet:'Flamingo colonies raid each other\'s nests — a single egg provides enormous nutritional value.'}] },
+  { emoji:'🦫', name:'Beaver',   latin:'Castor fiber',           stars:5, fact:'A beaver\'s dam can flood <strong>hectares of forest</strong> and create entire new ecosystems.', goals:[{emoji:'🌲',name:'Bark',diet:'Beavers gnaw through tree trunks to access the soft cambium layer beneath the bark.'},{emoji:'🍃',name:'Leaves',diet:'Beavers store branches underwater through winter, feeding on leaves sealed under ice.'},{emoji:'🌿',name:'Aquatic Plants',diet:'Water lilies and reeds are summer staples; beavers dive to uproot them from the riverbed.'}] },
+  { emoji:'🦋', name:'Butterfly',latin:'Lepidoptera sp.',        stars:5, fact:'Butterflies taste with their <strong>feet</strong> and can detect sugar 200× better than humans.', goals:[{emoji:'🌸',name:'Nectar',diet:'Butterflies feed exclusively on liquid nectar, uncoiling their proboscis to reach deep into flowers.'},{emoji:'🍯',name:'Honeydew',diet:'Honeydew secreted by aphids is a rich sugar source sought by many butterfly species.'},{emoji:'🌼',name:'Pollen',diet:'Some butterflies consume pollen directly for protein, essential for egg production.'}] },
+  { emoji:'🦃', name:'Turkey',   latin:'Meleagris gallopavo',    stars:5, fact:'Wild turkeys can fly at <strong>90 km/h</strong> and run at 40 — despite appearances.', goals:[{emoji:'🌰',name:'Acorn',diet:'Acorns are a turkey\'s most prized food — they memorise every oak tree in their territory.'},{emoji:'🍄',name:'Mushroom',diet:'Turkeys forage for mushrooms in leaf litter, using their strong feet to scratch the ground.'},{emoji:'🐛',name:'Insect',diet:'Protein-rich insects are essential for turkey chicks and supplement adult diets year-round.'}] },
+  { emoji:'🐓', name:'Rooster',  latin:'Gallus gallus',          stars:5, fact:'Roosters perform <strong>tidbitting</strong> — a food call to share finds with their flock.', goals:[{emoji:'🌾',name:'Grain',diet:'Roosters forage for grains by scratching the ground, sharing every find with the flock.'},{emoji:'🐛',name:'Worm',diet:'Earthworms are the rooster\'s favourite treat — located by tilting the head to listen underground.'},{emoji:'🐞',name:'Beetle',diet:'Beetles and other insects provide essential protein in the rooster\'s omnivorous diet.'}] },
+  { emoji:'🦙', name:'Llama',    latin:'Lama glama',             stars:5, fact:'Llamas hum to communicate and spit with <strong>remarkable accuracy</strong> up to 4 metres.', goals:[{emoji:'🌿',name:'Shrub',diet:'Llamas browse on hardy Andean shrubs, stripping leaves efficiently with their split upper lip.'},{emoji:'🌾',name:'Grass',diet:'High-altitude bunch grasses are a llama staple — they graze for up to 8 hours daily.'},{emoji:'🍃',name:'Leaves',diet:'Llamas select leaves carefully, never overgrazing a single plant — a natural conservation instinct.'}] },
+  { emoji:'🐏', name:'Ram',      latin:'Ovis aries',             stars:5, fact:'Ram horns can weigh <strong>14 kg</strong> — as much as all their other bones combined.', goals:[{emoji:'🌾',name:'Grass',diet:'Rams graze on short mountain grasses, using their agile lips to select the most nutritious shoots.'},{emoji:'🌿',name:'Shrub',diet:'Thorny mountain shrubs are stripped of leaves by rams using their tough, insensitive muzzles.'},{emoji:'🌱',name:'Alpine Herb',diet:'Rare alpine herbs provide minerals essential for maintaining the ram\'s enormous horn growth.'}] },
+  { emoji:'🐃', name:'Buffalo',  latin:'Syncerus caffer',        stars:5, fact:'Cape buffalo have killed more hunters than any other African animal — called <strong>Black Death</strong>.', goals:[{emoji:'🌾',name:'Grass',diet:'Buffalo consume up to 18 kg of grass daily, grazing for most of the night in large herds.'},{emoji:'🌿',name:'Reed',diet:'Riverbank reeds are sought out at dawn — buffalo wade chest-deep to access the most nutritious stems.'},{emoji:'🍃',name:'Sedge',diet:'Coarse sedges ignored by other grazers are consumed by buffalo thanks to their tough tongues.'}] },
+  { emoji:'🦗', name:'Cricket',  latin:'Gryllus campestris',     stars:5, fact:'Crickets chirp by rubbing their wings — faster in warm weather, slower in cold.', goals:[{emoji:'🌿',name:'Plant Matter',diet:'Crickets consume almost any plant material, from fresh leaves to decomposing organic matter.'},{emoji:'🍄',name:'Fungi',diet:'Underground fungi are located by smell and consumed to supplement the cricket\'s plant diet.'},{emoji:'🐛',name:'Larvae',diet:'Protein-rich insect larvae are eaten opportunistically — crickets are surprisingly omnivorous.'}] },
+  { emoji:'🕷️', name:'Spider',   latin:'Araneus diadematus',     stars:5, fact:'Spiders recycle their webs by <strong>eating the silk</strong> and spinning a fresh one each day.', goals:[{emoji:'🦟',name:'Mosquito',diet:'Mosquitoes are the most commonly trapped prey — a spider can consume dozens per night.'},{emoji:'🦋',name:'Moth',diet:'Large moths are ambushed mid-flight by jumping spiders with remarkable accuracy.'},{emoji:'🐜',name:'Ant',diet:'Ground spiders hunt ants using chemical mimicry, disguising their scent to infiltrate colonies.'}] },
+  { emoji:'🪲', name:'Beetle',   latin:'Coleoptera sp.',         stars:5, fact:'Beetles make up <strong>25% of all known animal species</strong> on Earth — over 400,000 types.', goals:[{emoji:'🌲',name:'Wood',diet:'Wood-boring beetles spend years as larvae consuming dead timber from the inside out.'},{emoji:'🍄',name:'Fungi',diet:'Fungus beetles cultivate specific moulds inside rotting wood, farming their own food source.'},{emoji:'🌿',name:'Leaf',diet:'Leaf beetles consume entire canopies, skeletonising leaves by eating everything but the veins.'}] },
+];
+
+const DRAGON_KEY = 'wm_dragon';
+function loadDragonBadge(){ try{ return JSON.parse(localStorage.getItem(DRAGON_KEY)||'null'); }catch{ return null; } }
+function saveDragonBadge(d){ try{ localStorage.setItem(DRAGON_KEY,JSON.stringify(d)); }catch{} }
+function hasDragonBadge(){ return loadDragonBadge()!==null; }
+
+// Dragon race state
+let dragonRaceActive=false, dragonPath=[], dragonStep=0, _dragonTimer=null, dragonAvgMs=3000, dragonRaceAnimal=null, dragonRaceGoalData=null;
+let chosenBiome    = null;
+let chosenAnimal   = null;
+let chosenGoalData = null;
+let foodCollected  = []; // {food emoji, food name, animal emoji, biome emoji}
+
+let gridSize=8, cells=[], path=[], currentStep=0, totalSteps=0, stepErrors=0;
+let startTime=0, elapsedMs=0, _timer=null, bonusTotal=0, _stepStartTime=0;
+let forestElements=[], HEX_SIZE=30, _pulse=null;
+// Countdown (prehistoric)
+let countdownMs=0, _countdownTimer=null, countdownActive=false;
+// Difficulty modifiers
+let activeMods = { decoys:false, opChain:false, reverse:false, fog:false };
+let stepMod = null;
+let gameStarted = false;
+let fogOccurred = false; // tracks if fog mod fired at least once this game
+
+const best = { score:0, timeMs:Infinity, steps:Infinity, animalEmoji:'', biomeEmoji:'' };
+
+// ═══════════════════════════════════════════
+//  SCREEN NAVIGATION
+// ═══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el2 = document.getElementById(id);
+  if (el2) el2.classList.add('active');
+  document.getElementById('game-screen').style.display='none';
+}
+function showGameScreen() {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('game-screen').style.display='flex';
+}
+
+// ═══════════════════════════════════════════
+//  BUILD BIOME PICKER
+// ═══════════════════════════════════════════
+function buildBiomePicker() {
+  const grid = document.getElementById('biome-grid');
+  grid.innerHTML = '';
+  BIOMES.forEach(b => {
+    const c = document.createElement('div');
+    c.className = 'biome-card';
+    c.style.borderColor = b.border;
+    c.innerHTML = `<div class="biome-emoji">${b.emoji}</div><div class="biome-name" style="color:${b.accent}">${b.name}</div>`;
+    c.addEventListener('click', () => pickBiome(b));
+    grid.appendChild(c);
+  });
+  // Prehistoric — centered at bottom
+  const pc = document.createElement('div');
+  if(isPrehistoricUnlocked()){
+    pc.className = 'biome-card-prehistoric';
+    pc.innerHTML = `<div class="biome-emoji">🌋</div><div class="biome-name" style="color:#f07000">Prehistoric</div>`;
+    pc.addEventListener('click', () => pickBiome(PREHISTORIC_BIOME));
+  } else {
+    pc.className = 'biome-card-prehistoric';
+    pc.style.opacity = '0.5';
+    pc.style.cursor = 'default';
+    pc.style.filter = 'grayscale(0.6)';
+    pc.innerHTML = `<div class="biome-emoji">❓</div><div class="biome-name" style="color:#666">???</div><div style="font-size:.55rem;color:#555;font-weight:700;text-align:center;line-height:1.4">Complete a 5★ animal<br>to unlock</div>`;
+  }
+  grid.appendChild(pc);
+}
+
+function pickBiome(biome) {
+  chosenBiome = biome;
+  document.documentElement.style.setProperty('--accent', biome.accent);
+  document.documentElement.style.setProperty('--border', biome.border);
+  document.getElementById('chosen-biome-emoji').textContent = biome.emoji;
+  document.getElementById('animal-screen-title').textContent = `Choose your ${biome.name} animal`;
+  document.getElementById('biome-desc-icon').textContent = biome.emoji;
+  document.getElementById('biome-desc-text').textContent = biome.desc;
+  buildAnimalPicker(biome);
+  showScreen('s-animal');
+}
+
+function buildAnimalPicker(biome) {
+  const grid = document.getElementById('animal-grid');
+  grid.innerHTML = '';
+  const isPrehistoric = biome.prehistoric;
+  const currentTier = loadTier();
+  grid.style.gridTemplateColumns = isPrehistoric ? 'repeat(3,1fr)' : 'repeat(4,1fr)';
+  const sorted = [...biome.animals].sort((a,b) => a.stars - b.stars);
+  sorted.forEach(a => {
+    const c = document.createElement('div');
+    c.className = 'animal-card';
+    const locked = !isPrehistoric && a.stars > currentTier;
+    const starsHtml = isPrehistoric
+      ? `<div style="font-size:.5rem;letter-spacing:0px;color:#f07000;opacity:.9">${'★'.repeat(5)}</div>`
+      : `<div style="font-size:.5rem;letter-spacing:0px;opacity:.8">${'⭐'.repeat(a.stars)}</div>`;
+    if(locked){
+      c.style.opacity = '0.4';
+      c.style.filter = 'grayscale(0.8)';
+      c.style.cursor = 'default';
+      c.innerHTML = `<div class="ae">🔒</div><div class="an" style="visibility:hidden">${a.name}</div>${starsHtml}`;
+    } else {
+      c.innerHTML = `<div class="ae">${a.emoji}</div><div class="an">${a.name}</div>${starsHtml}`;
+      c.addEventListener('click', () => pickAnimal(a));
+    }
+    grid.appendChild(c);
+  });
+}
+
+function pickAnimal(animal) {
+  chosenAnimal   = animal;
+  chosenGoalData = animal.goals[Math.floor(Math.random()*animal.goals.length)];
+  showInfoCard();
+}
+
+// ═══════════════════════════════════════════
+//  INFO CARD
+// ═══════════════════════════════════════════
+const DIFF_INFO = [
+  { label:'⭐ Novice',          chips:['+ −', '1–20', '10–14 steps'],           newThis:'Your first steps into the wild. Just + and −, small numbers.' },
+  { label:'⭐ Novice',          chips:['+ −', '1–20', '10–14 steps'],           newThis:'Your first steps into the wild. Just + and −, small numbers.' },
+  { label:'⭐⭐ Apprentice',     chips:['+ − × ÷', '1–50', '12–16 steps'],      newThis:'🆕 × and ÷ now appear. Numbers up to 50. Longer paths.' },
+  { label:'⭐⭐⭐ Adventurer',    chips:['+ − × ÷', '1–99', '14–18 steps', '⛓ Op Chain'],   newThis:'🆕 Op Chain may appear — two operations shown, calculate both steps mentally.' },
+  { label:'⭐⭐⭐⭐ Tracker',      chips:['+ − × ÷', '1–99', '16–20 steps', '⛓ Op Chain', '🔄 Reverse'], newThis:'🆕 Reverse Ops may appear — operation and result shown, find the missing operand.' },
+  { label:'⭐⭐⭐⭐⭐ Expert',      chips:['+ − × ÷', '1–99', '18–24 steps', '⛓ Op Chain', '🔄 Reverse', '🌫 Fog'], newThis:'🆕 Fog may appear — numbers vanish after 2 seconds. Remember fast!' },
+];
+
+function showInfoCard() {
+  document.getElementById('ic-emoji').textContent = chosenAnimal.emoji;
+  document.getElementById('ic-name').textContent  = chosenAnimal.name;
+  document.getElementById('ic-latin').textContent = chosenAnimal.latin;
+  document.getElementById('ic-fact').innerHTML    = chosenAnimal.fact;
+  const isPrehistoric = chosenBiome.prehistoric;
+  if(isPrehistoric){
+    const mins=Math.floor(chosenAnimal.countdown/60), secs=chosenAnimal.countdown%60;
+    const timeStr=mins+':'+(secs<10?'0':'')+secs;
+    document.getElementById('ic-diff-title').innerHTML=`<span style="color:#f07000">${'★'.repeat(5)} Prehistoric</span>`;
+    document.getElementById('ic-diff-chips').innerHTML=
+      `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">
+        <span class="diff-chip" style="border-color:#6a3010;color:#f07000">⏱ ${timeStr} countdown</span>
+        <span class="diff-chip" style="border-color:#6a3010;color:#f07000">All modifiers</span>
+        <span class="diff-chip" style="border-color:#6a3010;color:#f07000">💀 Extinction if time runs out</span>
+      </div>`+
+      `<div style="font-size:.72rem;font-weight:700;color:#8a5030;line-height:1.6">Finish before the ancient world claims you. First completion unlocks an exclusive relic.</div>`;
+  } else {
+    const d = DIFF_INFO[chosenAnimal.stars] || DIFF_INFO[1];
+    document.getElementById('ic-diff-title').textContent = d.label;
+    document.getElementById('ic-diff-chips').innerHTML =
+      `<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px">${d.chips.map(ch=>`<span class="diff-chip">${ch}</span>`).join('')}</div>`+
+      `<div style="font-size:.72rem;font-weight:700;color:var(--dim);line-height:1.6">${d.newThis}</div>`;
+  }
+  document.getElementById('info-overlay').classList.add('show');
+}
+document.getElementById('ic-start-btn').addEventListener('click', () => {
+  document.getElementById('info-overlay').classList.remove('show');
+  const s = chosenAnimal.stars || 1;
+  if(chosenBiome.prehistoric){
+    activeMods = { opChain:true, reverse:true, fog:true };
+  } else {
+    activeMods = { opChain:s>=3, reverse:s>=4, fog:s>=5 };
+  }
+  showGameScreen();
+  document.getElementById('hero-badge').textContent = chosenAnimal.emoji;
+  document.getElementById('biome-tag').textContent  = chosenBiome.emoji + ' ' + chosenBiome.name;
+  newGame();
+});
+
+function winPlayAgain() {
+  document.getElementById('win-overlay').classList.remove('show');
+  chosenGoalData = chosenAnimal.goals[Math.floor(Math.random()*chosenAnimal.goals.length)];
+  showGameScreen();
+  newGame();
+}
+function winChangeBiome() {
+  document.getElementById('win-overlay').classList.remove('show');
+  showScreen('s-biome');
+}
+function goMainMenu() {
+  if (_timer) clearInterval(_timer);
+  document.getElementById('ready-bar').classList.remove('hide');
+  showScreen('s-intro');
+}
+function goPickAnimal() {
+  if (_timer) clearInterval(_timer);
+  showScreen('s-animal');
+}
+
+// ═══════════════════════════════════════════
+//  HEX GEOMETRY
+// ═══════════════════════════════════════════
+const NS='http://www.w3.org/2000/svg';
+function el(tag,attrs={}){const e=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);return e}
+function gEl(id){const g=el('g');if(id)g.id=id;return g}
+function hexPts(cx,cy,r){const p=[];for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);p.push(`${(cx+r*Math.cos(a)).toFixed(2)},${(cy+r*Math.sin(a)).toFixed(2)}`)}return p.join(' ')}
+function hexCenter(row,col,s){const W=Math.sqrt(3)*s,H=2*s;return{cx:col*W+(row%2===1?W/2:0)+W/2,cy:row*H*.75+H/2}}
+function getNeighbors(row,col,gs){
+  const dirs=row%2===1?[[0,1],[0,-1],[-1,0],[-1,1],[1,0],[1,1]]:[[0,1],[0,-1],[-1,-1],[-1,0],[1,-1],[1,0]];
+  const s=new Set();
+  for(const[dr,dc]of dirs){const nr=row+dr,nc=col+dc;if(nr>=0&&nr<gs&&nc>=0&&nc<gs)s.add(nr*gs+nc)}
+  return s;
+}
+function rc(idx){return{row:Math.floor(idx/gridSize),col:idx%gridSize}}
+
+// ═══════════════════════════════════════════
+//  GAME GENERATION
+// ═══════════════════════════════════════════
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+
+function edgeScore(idx){const{row,col}=rc(idx);return getNeighbors(row,col,gridSize).size}
+
+function generatePath(){
+  const stars = chosenAnimal?.stars || 1;
+  // Path length increases with difficulty
+  const [minLen, maxLen] = [
+    [10,14], // ⭐
+    [12,16], // ⭐⭐
+    [14,18], // ⭐⭐⭐
+    [16,20], // ⭐⭐⭐⭐
+    [18,24], // ⭐⭐⭐⭐⭐
+  ][stars-1] || [10,14];
+
+  const total=gridSize*gridSize;
+  for(let att=0;att<600;att++){
+    const p=[];
+    let pos, tries=0;
+    do{pos=Math.floor(Math.random()*total);tries++}while(edgeScore(pos)<6&&tries<200);
+    p.push(pos);const seen=new Set([pos]);
+    while(p.length<maxLen){
+      const{row,col}=rc(pos);
+      const nbrs=[...getNeighbors(row,col,gridSize)].filter(n=>!seen.has(n));
+      if(!nbrs.length)break;
+      const weights=nbrs.map(n=>{
+        const es=edgeScore(n);
+        const{row:nr,col:nc}=rc(n);
+        const vc=[...getNeighbors(nr,nc,gridSize)].filter(x=>seen.has(x)).length;
+        return Math.pow(es,5)*Math.pow(0.15,vc);
+      });
+      const tw=weights.reduce((a,b)=>a+b,0);if(!tw)break;
+      let r=Math.random()*tw;let chosen=nbrs[nbrs.length-1];
+      for(let i=0;i<nbrs.length;i++){r-=weights[i];if(r<=0){chosen=nbrs[i];break}}
+      pos=chosen;seen.add(pos);p.push(pos);
+    }
+    if(p.length>=minLen){
+      const ec=p.filter(i=>edgeScore(i)<6).length;
+      if(ec/p.length>0.25)continue;
+      return p;
+    }
+  }
+  return Array.from({length:minLen},(_,i)=>i+gridSize+1);
+}
+
+function newGame(){
+  currentStep=0;totalSteps=0;stepErrors=0;bonusTotal=0;gameStarted=false;
+  stepTimes=[]; freezeActive=false; lifeActive=false; fogOccurred=false;
+  countdownActive=false; countdownMs=0;
+  if(_countdownTimer){clearInterval(_countdownTimer);_countdownTimer=null;}
+  if(_dragonTimer){clearInterval(_dragonTimer);_dragonTimer=null;}
+  dragonStep=0; dragonPath=[];
+  window._freezeResumeCallback=null; window._chainLen=2; window._chainFinalVal=undefined; window._reverseOperand=undefined;
+  gameAbilities = loadAbilities();
+  lifeActive = gameAbilities.includes('life');
+  renderAbilities();
+  if(_pulse)clearInterval(_pulse);if(_timer)clearInterval(_timer);
+  elapsedMs=0; updateTimer();
+  document.getElementById('win-overlay').classList.remove('show');
+  document.getElementById('gameover-overlay').classList.remove('show');
+
+  const total=gridSize*gridSize;
+  cells=shuffle(Array.from({length:99},(_,i)=>i+1)).slice(0,total);
+  path=generatePath();
+
+  // Number range and operation type by level
+  const stars = chosenAnimal?.stars || 1;
+  const maxNum    = stars === 1 ? 20 : stars === 2 ? 50 : 99;
+  const allowMult = stars >= 2; // × and ÷ only from ⭐⭐ up
+
+  const FACTORS=[2,3,4,5,6,7,8,9,10,12];
+  const usedVals=new Set();
+  let sv = 1 + Math.floor(Math.random() * (stars===1 ? 10 : 15));
+  cells[path[0]]=sv; usedVals.add(sv);
+
+  for(let i=1;i<path.length;i++){
+    const prev=cells[path[i-1]];
+    const cands=[];
+    // Multiplicative candidates (only if level allows)
+    if(allowMult && Math.random()<0.5){
+      for(const f of shuffle([...FACTORS])){
+        const m=prev*f, d=prev/f;
+        if(m>=1&&m<=maxNum&&!usedVals.has(m))cands.push(m);
+        if(Number.isInteger(d)&&d>=1&&d<=maxNum&&!usedVals.has(d))cands.push(d);
+        if(cands.length>=3)break;
+      }
+    }
+    // Additive candidates — always available
+    const range = stars === 1 ? 10 : 20;
+    for(let d=-range;d<=range;d++){
+      if(!d)continue;
+      const v=prev+d;
+      if(v>=1&&v<=maxNum&&!usedVals.has(v))cands.push(v);
+    }
+    if(cands.length>0){
+      const ch=cands[Math.floor(Math.random()*Math.min(cands.length,6))];
+      cells[path[i]]=ch; usedVals.add(ch);
+    }
+  }
+
+  const pathSet=new Set(path);
+  const EM=chosenBiome.forestEmojis;
+  forestElements=Array.from({length:total},(_,idx)=>{
+    const onPath=pathSet.has(idx);
+    const chance=onPath?0.15:0.40;
+    if(Math.random()<chance)return{emoji:EM[Math.floor(Math.random()*EM.length)],dx:(Math.random()-.5)*.35,dy:(Math.random()-.5)*.35};
+    return null;
+  });
+
+  // Show ready overlay — timer starts only when player clicks ready
+  document.getElementById('ready-animal').textContent = chosenAnimal.emoji;
+  const ro = document.getElementById('ready-bar');
+  ro.classList.remove('hide');
+  // Pre-show countdown for prehistoric before ready
+  if(chosenBiome.prehistoric && chosenAnimal.countdown){
+    countdownMs = chosenAnimal.countdown * 1000;
+    document.getElementById('countdown-bar-wrap').style.display='block';
+    const fill=document.getElementById('countdown-fill');
+    if(fill){fill.style.width='100%';fill.classList.remove('danger');}
+  } else {
+    document.getElementById('countdown-bar-wrap').style.display='none';
+  }
+  // Render SVG without numbers (ready state)
+  rollStepMod();
+  renderOp();
+  renderSVG();
+  updateStats();
+  // Op panel hidden until ready
+  document.getElementById('op-text').textContent = '—';
+}
+
+document.getElementById('ready-btn').addEventListener('click', () => {
+  document.getElementById('ready-bar').classList.add('hide');
+  gameStarted = true;
+  startTime=Date.now();elapsedMs=0;_stepStartTime=Date.now();
+  rollStepMod();renderOp();renderSVG();
+  _timer=setInterval(()=>{
+    elapsedMs=Date.now()-startTime;
+    updateTimer();
+  },200);
+  // Start prehistoric countdown
+  if(chosenBiome.prehistoric && chosenAnimal.countdown){
+    countdownMs = chosenAnimal.countdown * 1000;
+    countdownActive = true;
+    document.getElementById('countdown-bar-wrap').style.display='block';
+    _countdownTimer = setInterval(()=>{
+      countdownMs -= 100;
+      updateTimer();
+      if(countdownMs <= 0){
+        clearInterval(_countdownTimer); _countdownTimer=null;
+        countdownActive=false;
+        triggerExtinction();
+      }
+    },100);
+  } else {
+    document.getElementById('countdown-bar-wrap').style.display='none';
+  }
+  // Start dragon AI if in dragon race
+  if(dragonRaceActive){ startDragonAI(); }
+});
+
+// ═══════════════════════════════════════════
+//  SVG RENDER
+// ═══════════════════════════════════════════
+function renderSVG(){
+  const svg=document.getElementById('hex-svg');svg.innerHTML='';
+  const cw=svg.parentElement.clientWidth-22;
+  HEX_SIZE=Math.max(22,Math.min(42,(cw/(gridSize*Math.sqrt(3)+Math.sqrt(3)/2))*.97));
+  const W=Math.sqrt(3)*HEX_SIZE,H=2*HEX_SIZE;
+  const svgW=gridSize*W+W/2,svgH=gridSize*H*.75+H*.25;
+  svg.setAttribute('width',svgW.toFixed(1));svg.setAttribute('height',svgH.toFixed(1));
+
+  const F=chosenBiome.hexFills,S=chosenBiome.hexStrokes;
+  const currentIdx=path[currentStep],goalIdx=path[path.length-1];
+  const visitedSet=new Set(path.slice(0,currentStep));
+  const{row:cr,col:cc}=rc(currentIdx);const neighborSet=getNeighbors(cr,cc,gridSize);
+
+  const centers=[];
+  for(let i=0;i<gridSize*gridSize;i++){const{row,col}=rc(i);centers.push(hexCenter(row,col,HEX_SIZE))}
+
+  const lBg=gEl('l-bg'),lTree=gEl('l-tree'),lFx=gEl('l-fx'),lHit=gEl('l-hit');
+  [lBg,lTree,lFx,lHit].forEach(g=>svg.appendChild(g));
+
+  const fs=Math.max(7,HEX_SIZE*.32),badgeR=HEX_SIZE*.24,badgeOff=HEX_SIZE*.44,emojiSz=Math.max(12,HEX_SIZE*.68);
+
+  for(let idx=0;idx<gridSize*gridSize;idx++){
+    const{cx,cy}=centers[idx];const pts=hexPts(cx,cy,HEX_SIZE-1);
+    const isC=idx===currentIdx,isG=idx===goalIdx,isV=visitedSet.has(idx),isN=neighborSet.has(idx);
+    let fill,stroke,sw;
+    if(isC)     {fill=F.current; stroke=S.current; sw=2}
+    else if(isV){fill=F.visited; stroke=S.visited; sw=1.2}
+    else if(isN){fill=F.neighbor;stroke=S.neighbor;sw=1.5}
+    else        {fill=F.idle;    stroke=S.idle;     sw=1}
+    lBg.appendChild(el('polygon',{points:pts,fill,stroke,'stroke-width':sw}));
+  }
+
+  for(let idx=0;idx<gridSize*gridSize;idx++){
+    const{cx,cy}=centers[idx];
+    const isC=idx===currentIdx,isG=idx===goalIdx,isV=visitedSet.has(idx),isN=neighborSet.has(idx),isVisible=isC||isN||isV;
+
+    if(isC){
+      addEmoji(lFx,chosenAnimal.emoji,cx,cy,emojiSz);
+      if(gameStarted) addBadge(lFx,cells[idx],cx,cy+badgeOff,badgeR,fs,chosenBiome.accent,'#060c04');
+    } else if(isG){
+      addEmoji(lFx,chosenGoalData.emoji,cx,cy,emojiSz*(isN?1:.6),isN?1:.4);
+      if(isVisible&&gameStarted)addBadge(lFx,cells[idx],cx,cy+badgeOff*.88,badgeR*.88,fs*.88,'#c8e888','#060c04');
+    } else if(isV){
+      const fe=forestElements[idx];
+      if(fe)addEmoji(lTree,fe.emoji,cx+fe.dx*HEX_SIZE,cy+fe.dy*HEX_SIZE,Math.max(10,HEX_SIZE*.52),.5);
+      if(gameStarted){
+        const ng=el('g');
+        ng.appendChild(el('circle',{cx:cx.toFixed(2),cy:(cy+badgeOff*.88).toFixed(2),r:(badgeR*.88).toFixed(2),fill:'rgba(0,0,0,.6)'}));
+        ng.appendChild(svgT(cells[idx],cx,cy+badgeOff*.88,fs*.88,'#f5e070'));
+        lFx.appendChild(ng);
+      }
+    } else {
+      const fe=forestElements[idx];
+      if(fe)addEmoji(lTree,fe.emoji,cx+fe.dx*HEX_SIZE,cy+fe.dy*HEX_SIZE,Math.max(10,HEX_SIZE*.52),isN?.85:.4);
+      if(isN && gameStarted){
+        let displayNum = cells[idx];
+        const nextIdx  = path[currentStep+1];
+        const isCorrect = idx === nextIdx;
+
+        if(stepMod === 'reverse' && window._op){
+          // Show operand values: correct cell → real operand, others → distractors
+          const realOp = window._op.operand;
+          if(isCorrect){
+            displayNum = realOp;
+          } else {
+            // Deterministic distractor near realOp
+            const seed = Math.sin(idx * 91.3 + currentStep * 53.7);
+            const off  = Math.floor(Math.abs(seed) * 5) + 1;
+            displayNum = Math.max(1, Math.min(99, realOp + (seed > 0 ? off : -off)));
+          }
+        } else if(stepMod === 'opChain' && currentStep+2 <= path.length-1){
+          const finalVal = window._chainFinalVal;
+          if(finalVal !== undefined){
+            if(isCorrect){
+              displayNum = finalVal;
+            } else {
+              // Deterministic distractor near finalVal
+              const seed = Math.sin(idx * 91.3 + currentStep * 53.7);
+              const off  = Math.floor(Math.abs(seed) * 6) + 1;
+              displayNum = Math.max(1, Math.min(99, finalVal + (seed > 0 ? off : -off)));
+            }
+          }
+        } else if(stepMod === 'decoys' && !isCorrect){
+          const seed = Math.sin(idx * 127.1 + currentStep * 31.7);
+          if(seed > 0.3) displayNum = cells[nextIdx];
+        }
+
+        addBadge(lFx,displayNum,cx,cy+badgeOff*.88,badgeR*.88,fs*.88,'rgba(200,220,160,.85)','#060c04');
+      }
+    }
+  }
+
+  for(let idx=0;idx<gridSize*gridSize;idx++){
+    const isC=idx===currentIdx,isN=neighborSet.has(idx);
+    if(isC||!isN||currentStep>=path.length-1)continue;
+    const{cx,cy}=centers[idx];
+    const hit=el('polygon',{points:hexPts(cx,cy,HEX_SIZE-1),fill:'transparent',stroke:'none'});
+    hit.style.cursor='pointer';
+    hit.addEventListener('mouseenter',()=>{const bg=lBg.children[idx];if(bg)bg.setAttribute('fill',chosenBiome.hexFills.neighbor)});
+    hit.addEventListener('mouseleave',()=>{const bg=lBg.children[idx];if(bg)bg.setAttribute('fill',visitedSet.has(idx)?chosenBiome.hexFills.visited:neighborSet.has(idx)?chosenBiome.hexFills.neighbor:chosenBiome.hexFills.idle)});
+    hit.addEventListener('click',()=>handleClick(idx));
+    lHit.appendChild(hit);
+  }
+
+  const pct=path.length>1?Math.round((currentStep/(path.length-1))*100):0;
+  document.getElementById('progress-fill').style.width=pct+'%';
+
+  // Render dragon on top
+  if(dragonRaceActive) renderDragonOnSVG(svg, centers);
+}
+
+function addEmoji(layer,emoji,cx,cy,size,opacity=1){
+  const t=el('text',{x:cx.toFixed(2),y:cy.toFixed(2),'text-anchor':'middle','dominant-baseline':'central','font-size':size.toFixed(1),opacity:opacity.toFixed(2)});
+  t.style.pointerEvents='none';t.textContent=emoji;layer.appendChild(t);
+}
+function addBadge(layer,num,cx,cy,r,fs,bgCol,txCol){
+  const g=el('g');
+  g.appendChild(el('circle',{cx:cx.toFixed(2),cy:cy.toFixed(2),r:r.toFixed(2),fill:bgCol,opacity:'0.92'}));
+  g.appendChild(svgT(num,cx,cy,fs,txCol));layer.appendChild(g);
+}
+function svgT(txt,x,y,size,fill){
+  const t=el('text',{x:x.toFixed(2),y:y.toFixed(2),'text-anchor':'middle','dominant-baseline':'central','font-size':size.toFixed(1),'font-family':'Space Mono, monospace','font-weight':'700',fill});
+  t.style.pointerEvents='none';t.textContent=txt;return t;
+}
+
+// ═══════════════════════════════════════════
+//  PERSISTENCE — localStorage
+// ═══════════════════════════════════════════
+function loadBest() {
+  try {
+    const b = JSON.parse(localStorage.getItem('wm_best') || 'null');
+    if (b) { best.score=b.score||0; best.timeMs=b.timeMs||Infinity; best.animalEmoji=b.animalEmoji||''; best.biomeEmoji=b.biomeEmoji||''; best.animalStars=b.animalStars||0; best.prehistoric=b.prehistoric||false; }
+  } catch {}
+}
+function saveBest() {
+  try { localStorage.setItem('wm_best', JSON.stringify({score:best.score,timeMs:best.timeMs,animalEmoji:best.animalEmoji,biomeEmoji:best.biomeEmoji,animalStars:best.animalStars,prehistoric:best.prehistoric})); } catch {}
+}
+function loadFinds() {
+  try { return JSON.parse(localStorage.getItem('wm_finds') || '[]'); } catch { return []; }
+}
+function saveFinds() {
+  try { localStorage.setItem('wm_finds', JSON.stringify(foodCollected)); } catch {}
+}
+
+function confirmReset() {
+  // Clear all saved data
+  localStorage.removeItem('wm_best');
+  localStorage.removeItem('wm_finds');
+  localStorage.removeItem('wm_abilities');
+  localStorage.removeItem('wm_tutorial_done');
+  localStorage.removeItem('wm_relics');
+  localStorage.removeItem('wm_prehistoric_unlocked');
+  localStorage.removeItem('wm_tier');
+  localStorage.removeItem('wm_dragon');
+  localStorage.removeItem('wm_achievements');
+  localStorage.removeItem('wm_ach_abilities_used');
+  // Reset runtime state
+  best.score=0; best.timeMs=Infinity; best.animalEmoji=''; best.biomeEmoji='';
+  foodCollected = [];
+  gameAbilities = [];
+  saveAbilities([]);
+  renderBestScores();
+  renderFoodPanel();
+  renderAbilities();
+  buildBiomePicker();
+  checkDragonRaceCard();
+  updateAchMenuCounter();
+  document.getElementById('settings-overlay').classList.remove('show');
+}
+// ═══════════════════════════════════════════
+const ABILITY_DEFS = {
+  life:    { icon:'❤️',  name:'Life',          tier:1, desc:'Next error is silently absorbed — no points lost.' },
+  freeze:  { icon:'🧊',  name:'Freeze',   tier:2, desc:'Timer stops until you tap a neighbour.' },
+  solve:   { icon:'🤖',  name:'Auto',  tier:3, desc:'Auto-taps the correct next cell for you.' },
+};
+
+// Load from localStorage
+function loadAbilities() {
+  try { return JSON.parse(localStorage.getItem('wm_abilities') || '[]'); }
+  catch { return []; }
+}
+function saveAbilities(arr) {
+  try { localStorage.setItem('wm_abilities', JSON.stringify(arr)); } catch {}
+}
+
+let gameAbilities = loadAbilities(); // current inventory
+let freezeActive = false;
+let lifeActive   = false;
+let stepTimes    = [];
+
+function getAbilityFromTime(avgMs) {
+  if (avgMs < 4000)  return 'solve';
+  if (avgMs < 8000)  return 'freeze';
+  if (avgMs < 14000) return 'life';
+  return null;
+}
+
+function awardAbility(type) {
+  const def = ABILITY_DEFS[type];
+  const existing = [...gameAbilities];
+  if (existing.length < 3) {
+    gameAbilities.push(type);
+  } else {
+    // Replace weakest if new one is stronger
+    const minTier = Math.min(...existing.map(t => ABILITY_DEFS[t].tier));
+    if (def.tier > minTier) {
+      const idx = existing.findIndex(t => ABILITY_DEFS[t].tier === minTier);
+      gameAbilities.splice(idx, 1, type);
+    } else {
+      return false; // not awarded
+    }
+  }
+  saveAbilities(gameAbilities);
+  return true;
+}
+
+function renderAbilities() {
+  const makeSlots = (containerId, usable) => {
+    const el2 = document.getElementById(containerId);
+    if (!el2) return;
+    if (!gameAbilities.length) {
+      el2.innerHTML = '<span class="ability-empty">No abilities yet — solve fast to earn one!</span>';
+      return;
+    }
+    el2.innerHTML = '';
+    gameAbilities.forEach((type, i) => {
+      const def = ABILITY_DEFS[type];
+      const chip = document.createElement('div');
+      const isPassive = type === 'life';
+      chip.className = `ability-chip${usable && !isPassive ? ' usable' : ''}${isPassive ? ' life-passive' : ''}`;
+      chip.innerHTML = `<span class="ac-icon">${def.icon}</span><span class="ac-name">${def.name}</span>`;
+      chip.title = def.desc;
+      if (usable && !isPassive) {
+        chip.addEventListener('click', () => activateAbility(type, i));
+      }
+      el2.appendChild(chip);
+    });
+  };
+  makeSlots('intro-ability-slots', false);
+  makeSlots('game-ability-slots', true);
+
+  const introPanel = document.getElementById('intro-ability-panel');
+  if (introPanel) introPanel.style.display = gameAbilities.length ? 'flex' : 'none';
+
+  // Life passive — check if in inventory
+  lifeActive = gameAbilities.includes('life');
+}
+
+function activateAbility(type, inventoryIdx) {
+  // Remove from inventory
+  gameAbilities.splice(inventoryIdx, 1);
+  saveAbilities(gameAbilities);
+  renderAbilities();
+  // Track for achievement
+  trackAbilityUsed(type);
+
+  if (type === 'freeze') {
+    freezeActive = true;
+    // Pause timer — we stop counting elapsedMs until next tap
+    if (_timer) clearInterval(_timer);
+    const frozenAt = elapsedMs;
+    // Visual indicator
+    spawnFloat('🧊 FROZEN', '#a0e8ff', window.innerWidth/2, window.innerHeight/2, 0);
+    // Will resume in handleClick on any tap
+    window._freezeResumeCallback = () => {
+      freezeActive = false;
+      window._freezeResumeCallback = null;
+      // Resume timer from where we froze
+      startTime = Date.now() - frozenAt;
+      _timer = setInterval(()=>{
+        elapsedMs = Date.now() - startTime;
+        updateTimer();
+        const el2 = document.getElementById('s-score');
+        if (el2) el2.textContent = calcScore() > 0 ? calcScore() : '0';
+      }, 200);
+    };
+  } else if (type === 'solve') {
+    // Auto-tap the correct next cell
+    if (currentStep >= path.length-1) return;
+    spawnFloat('🤖 AUTO', '#a0c8ff', window.innerWidth/2, window.innerHeight/2, 0);
+    setTimeout(() => handleClick(path[currentStep+1]), 400);
+  }
+}
+
+function checkFreezeResume() {
+  if (freezeActive && window._freezeResumeCallback) {
+    window._freezeResumeCallback();
+  }
+}
+
+// Show earned ability on win card
+function showEarnedAbility(type) {
+  const container = document.getElementById('win-ability-earned');
+  if (!container) return;
+  if (!type) { container.style.display = 'none'; return; }
+  const def = ABILITY_DEFS[type];
+  const awarded = awardAbility(type);
+  if (!awarded) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  container.innerHTML = `
+    <div class="ability-earned">
+      <div class="ae-icon">${def.icon}</div>
+      <div class="ae-info">
+        <strong>Ability Earned: ${def.name}!</strong>
+        <span>${def.desc}</span>
+      </div>
+    </div>`;
+  renderAbilities();
+}
+// ═══════════════════════════════════════════
+function rollStepMod() {
+  stepMod = null;
+  const r = Math.random();
+  if (activeMods.fog     && r < 0.20) { stepMod = 'fog';     return; }
+  if (activeMods.reverse && r < 0.40) { stepMod = 'reverse'; return; }
+  if (activeMods.opChain && r < 0.50) { stepMod = 'opChain'; return; }
+}
+
+// ═══════════════════════════════════════════
+//  OPERATION
+// ═══════════════════════════════════════════
+function getOpFixed(a, b) {
+  if (a !== 0) {
+    const r = b / a;
+    if (Number.isInteger(r) && r >= 2 && r <= 12)   return { sym:'×', operand:r, text:'×'+r };
+    if (Number.isInteger(r) && r <= -2 && r >= -12)  return { sym:'×', operand:r, text:'×('+r+')' };
+  }
+  if (b !== 0) {
+    const r = a / b;
+    if (Number.isInteger(r) && r >= 2 && r <= 12)    return { sym:'÷', operand:r, text:'÷'+r };
+  }
+  const d = b - a;
+  return { sym: d>=0?'+':'-', operand: Math.abs(d), text: (d>=0?'+':'')+d };
+}
+
+function getOp(a, b) {
+  const allowMult = (chosenAnimal?.stars || 1) >= 2;
+  const ops = [];
+  if (allowMult && a !== 0) {
+    const r = b / a;
+    if (Number.isInteger(r) && r >= 2 && r <= 12)   ops.push('×'+r);
+    if (Number.isInteger(r) && r <= -2 && r >= -12)  ops.push('×('+r+')');
+  }
+  if (allowMult && b !== 0) {
+    const r = a / b;
+    if (Number.isInteger(r) && r >= 2 && r <= 12)    ops.push('÷'+r);
+  }
+  const d = b - a;
+  ops.push((d>=0?'+':'')+d);
+  return ops[Math.floor(Math.random()*ops.length)];
+}
+
+function renderOp() {
+  if (currentStep >= path.length-1) return;
+  const fv  = cells[path[currentStep]];
+  const tv  = cells[path[currentStep+1]];
+  const op  = getOpFixed(fv, tv);
+  const modeEl = document.getElementById('op-mode');
+
+  window._fv = fv;
+  window._tv = tv;
+  window._op = op;
+
+  if (stepMod === 'reverse') {
+    // Show: "×? = 12"  — operation and result shown, operand hidden
+    // Neighbours will show operand values (correct cell shows op.operand)
+    if (modeEl) modeEl.textContent = '';
+    document.getElementById('op-text').textContent = `${op.sym}? = ${tv}`;
+    return;
+  }
+
+  if (stepMod === 'opChain' && currentStep+2 <= path.length-1) {
+    // Chain: show ops for the next 2-4 steps ahead
+    // All ops start FROM the current value (fv) and compound
+    const maxChain = Math.min(4, path.length-1 - currentStep);
+    window._chainLen = Math.floor(Math.random() * (maxChain - 1)) + 2;
+    const opTexts = [];
+    let val = fv;
+    for (let i = 0; i < window._chainLen; i++) {
+      const nextVal = cells[path[currentStep + i + 1]];
+      // Compute op from current val to nextVal
+      const chainOp = getOpFixed(val, nextVal);
+      opTexts.push(chainOp.text);
+      val = nextVal;
+    }
+    // Final result after all ops = cells[path[currentStep + chainLen]]
+    window._chainFinalVal = cells[path[currentStep + window._chainLen]];
+    if (modeEl) modeEl.textContent = '⛓';
+    document.getElementById('op-text').textContent = opTexts.join(' → ');
+    // Player still taps the FIRST next cell, but its badge shows the final result
+    window._tv = tv; // click validation unchanged
+    return;
+  }
+
+  // Normal (or decoys — operation shown normally, badges differ)
+  if (modeEl) modeEl.textContent = stepMod === 'decoys' ? '🎭' : '';
+  document.getElementById('op-text').textContent = getOp(fv, tv);
+}
+
+// ═══════════════════════════════════════════
+//  CLICK & BONUS
+// ═══════════════════════════════════════════
+function handleClick(idx){
+  if(currentStep>=path.length-1)return;
+  const correct=path[currentStep+1];
+  if(idx===correct){
+    const stepMs=Date.now()-_stepStartTime;
+    stepTimes.push(stepMs);
+    checkFreezeResume();
+    totalSteps++;currentStep++;
+    spawnStepBonus(stepMs,path[currentStep-1]);
+    if(tutMode) tutCorrectTap();
+    if(stepMod==='fog' && currentStep < path.length-1){
+      fogOccurred = true;
+      setTimeout(()=>{renderSVGFog();},2000);
+    }
+    setTimeout(()=>{
+      if(currentStep>=path.length-1){
+        if(_pulse)clearInterval(_pulse);
+        renderSVG();
+        if(!tutMode) showWin();
+      } else {
+        rollStepMod(); renderOp(); renderSVG();
+      }
+      _stepStartTime=Date.now();updateStats();
+    },110);
+  } else {
+    // Freeze: resume on any tap (wrong or right)
+    checkFreezeResume();
+    // Life: absorb error silently
+    if (lifeActive) {
+      const lifeIdx = gameAbilities.indexOf('life');
+      if (lifeIdx !== -1) {
+        gameAbilities.splice(lifeIdx, 1);
+        saveAbilities(gameAbilities);
+        lifeActive = false;
+        renderAbilities();
+        const svg2=document.getElementById('hex-svg');
+        if(svg2){const{row,col}=rc(idx);const c2=hexCenter(row,col,HEX_SIZE);const r2=svg2.getBoundingClientRect();spawnFloat('❤️ SAVED','#ff9090',r2.left+c2.cx,r2.top+c2.cy,0);}
+        updateStats();
+        return;
+      }
+    }
+    stepErrors++;
+    const bg=document.getElementById('l-bg')?.children[idx];
+    if(bg){const o=bg.getAttribute('fill');bg.setAttribute('fill','#881010');setTimeout(()=>bg.setAttribute('fill',o),380)}
+    const svg=document.getElementById('hex-svg');
+    if(svg){
+      const{row,col}=rc(idx);const center=hexCenter(row,col,HEX_SIZE);
+      const svgRect=svg.getBoundingClientRect();
+      spawnFloat('−150','#ff6060',svgRect.left+center.cx,svgRect.top+center.cy,0);
+    }
+    updateStats();
+    // Game over after 3 errors
+    if(stepErrors >= 3 && !tutMode){
+      setTimeout(()=>showGameOver(), 500);
+    }
+    if(stepErrors >= 3 && tutMode){
+      setTimeout(()=>tutGameOver(), 500);
+    }
+  }
+}
+
+function spawnStepBonus(stepMs, fromIdx) {
+  let bonusPts = 0, bonusColor = '';
+  if      (stepMs < 1200) { bonusPts = 200; bonusColor = '#fff07a'; }
+  else if (stepMs < 2500) { bonusPts = 100; bonusColor = '#f0d060'; }
+  else if (stepMs < 5000) { bonusPts =  50; bonusColor = '#c8a840'; }
+  if (bonusPts) bonusTotal += bonusPts;
+
+  const svg = document.getElementById('hex-svg'); if (!svg) return;
+  const {row, col} = rc(fromIdx);
+  const center = hexCenter(row, col, HEX_SIZE);
+  const svgRect = svg.getBoundingClientRect();
+  const x = svgRect.left + center.cx;
+  const y = svgRect.top  + center.cy;
+
+  // Always spawn the blue step float (+500)
+  spawnFloat('+500', '#60c8ff', x, y, 0);
+
+  // If bonus, spawn it slightly offset and delayed for a combo feel
+  if (bonusPts) {
+    setTimeout(() => spawnFloat('+'+bonusPts, bonusColor, x + 12, y - 8, 0), 120);
+  }
+}
+
+function spawnFloat(text, color, x, y, delay) {
+  const div = document.createElement('div');
+  div.className = 'bonus-float';
+  div.textContent = text;
+  div.style.color = color;
+  div.style.textShadow = `0 0 6px ${color}, 0 0 12px ${color}`;
+  div.style.left = x + 'px';
+  div.style.top  = y + 'px';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1600);
+}
+
+// Fog: replace neighbour numbers with ? after reveal window
+function renderSVGFog(){
+  const lFx=document.getElementById('l-fx');if(!lFx)return;
+  const{row:cr,col:cc}=rc(path[currentStep]);
+  const neighborSet=getNeighbors(cr,cc,gridSize);
+  const centers=[];
+  for(let i=0;i<gridSize*gridSize;i++){const{row,col}=rc(i);centers.push(hexCenter(row,col,HEX_SIZE))}
+  neighborSet.forEach(idx=>{
+    if(idx===path[path.length-1])return; // don't fog the goal
+    const{cx,cy}=centers[idx];
+    Array.from(lFx.querySelectorAll('text')).forEach(t=>{
+      if(Math.abs(parseFloat(t.getAttribute('x'))-cx)<3){
+        t.textContent='?';
+        t.setAttribute('fill','rgba(200,220,160,.35)');
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════
+//  SCORE & TIMER
+// ═══════════════════════════════════════════
+function calcScore(){
+  const secs = elapsedMs/1000;
+  const diffBonus = [0,0,100,200,350,500][Math.min(chosenAnimal?.stars||1, 5)] * currentStep;
+  return Math.max(0, currentStep*500 - Math.floor(secs*8) - stepErrors*150) + bonusTotal + diffBonus;
+}
+function fmtTime(ms){const s=Math.floor(ms/1000);return s<60?s+'s':Math.floor(s/60)+'m'+String(s%60).padStart(2,'0')+'s'}
+function fmtCountdown(ms){
+  const total=Math.max(0,Math.ceil(ms/1000));
+  return Math.floor(total/60)+':'+String(total%60).padStart(2,'0');
+}
+function updateTimer(){
+  const el=document.getElementById('s-time');
+  if(!el)return;
+  if(countdownActive || (chosenBiome?.prehistoric && chosenAnimal?.countdown && !gameStarted)){
+    el.textContent=fmtCountdown(countdownMs);
+    el.style.color = countdownMs<=30000 ? '#e03010' : '#f07000';
+    el.style.fontWeight = '900';
+    if(countdownMs<=30000){
+      el.style.animation='danger-pulse .4s infinite alternate';
+    } else {
+      el.style.animation='';
+    }
+    const bar=document.getElementById('countdown-fill');
+    if(bar && chosenAnimal?.countdown){
+      const pct=Math.max(0,countdownMs/(chosenAnimal.countdown*1000))*100;
+      bar.style.width=pct+'%';
+      if(countdownMs<=30000) bar.classList.add('danger');
+      else bar.classList.remove('danger');
+    }
+  } else {
+    el.textContent=fmtTime(elapsedMs);
+    el.style.color='';
+    el.style.fontWeight='';
+    el.style.animation='';
+  }
+}
+function showPrehistoricUnlockOverlay(onDone){
+  const o = document.getElementById('prehistoric-unlock-overlay');
+  const btn = document.getElementById('prehistoric-unlock-btn');
+  btn.onclick = () => {
+    o.style.display = 'none';
+    buildBiomePicker();
+    if(onDone) onDone();
+  };
+  o.style.display = 'flex';
+}
+
+function triggerExtinction(){
+  if(_timer){clearInterval(_timer);_timer=null;}
+  elapsedMs=Date.now()-startTime;
+  // Show extinction overlay
+  const go=document.getElementById('gameover-overlay');
+  document.getElementById('go-stats').textContent='Extinction 💀 — the ancient world claimed you.';
+  go.classList.add('show');
+}
+function updateCountdown_unused(){}
+function updateStats(){
+  const livesLeft = Math.max(0, 3 - stepErrors);
+  const livesEl = document.getElementById('s-errors');
+  if(livesEl) livesEl.textContent = livesLeft > 0 ? '❤️'.repeat(livesLeft) : '💀';
+  updateTimer();
+  document.getElementById('step-info').textContent=`STEP ${currentStep+1} / ${path.length}`;
+}
+
+// ═══════════════════════════════════════════
+//  BEST SCORES
+// ═══════════════════════════════════════════
+function showInstructions(){document.getElementById('instr-overlay').classList.add('show')}
+function flashBest(id){
+  const e=document.getElementById(id);if(!e)return;
+  e.classList.remove('new-record');void e.offsetWidth;e.classList.add('new-record');
+  setTimeout(()=>e.classList.remove('new-record'),2200);
+}
+function updateBestScores(score,timeMs,steps){
+  if(score>best.score){
+    best.score=score;
+    best.animalEmoji=chosenAnimal.emoji;
+    best.biomeEmoji=chosenBiome.emoji;
+    best.animalStars=chosenAnimal.stars;
+    best.prehistoric=!!chosenBiome.prehistoric;
+    flashBest('b-score');
+  }
+  if(timeMs<best.timeMs){best.timeMs=timeMs;flashBest('b-time');}
+  if(steps<best.steps){best.steps=steps;}
+  saveBest();
+  renderBestScores();
+}
+function renderBestScores(){
+  const sc=best.score>0?best.score:'—';
+  const tm=best.timeMs<Infinity?fmtTime(best.timeMs):'—';
+  ['b-score','ib-score'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=sc});
+  ['b-time','ib-time'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=tm});
+  const stars = best.animalStars
+    ? (best.prehistoric
+        ? `<span style="font-size:.42rem;color:#f07000;vertical-align:middle">${'★'.repeat(5)}</span>`
+        : `<span style="font-size:.42rem;vertical-align:middle">${'⭐'.repeat(best.animalStars)}</span>`)
+    : '';
+  const who = best.animalEmoji
+    ? `${best.biomeEmoji} ${best.animalEmoji} ${stars}`
+    : '—';
+  ['b-who','ib-who'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=who});
+  const hasBest=best.score>0||best.timeMs<Infinity;
+  const ib=document.getElementById('intro-best');if(ib)ib.style.display=hasBest?'flex':'none';
+}
+
+// ═══════════════════════════════════════════
+//  WIN
+// ═══════════════════════════════════════════
+function showGameOver(){
+  if(_timer) clearInterval(_timer);
+  if(_countdownTimer){clearInterval(_countdownTimer);_countdownTimer=null;}
+  if(_dragonTimer){clearInterval(_dragonTimer);_dragonTimer=null;}
+  countdownActive=false;
+  dragonRaceActive=false;
+  document.getElementById('countdown-bar-wrap').style.display='none';
+  elapsedMs = Date.now() - startTime;
+  const secs = Math.floor(elapsedMs/1000);
+  document.getElementById('go-stats').textContent =
+    `${currentStep} step${currentStep!==1?'s':''} · ${fmtTime(elapsedMs)} · score ${calcScore()}`;
+  document.getElementById('gameover-overlay').classList.add('show');
+}
+function gameOverPlayAgain(){
+  document.getElementById('gameover-overlay').classList.remove('show');
+  newGame();
+}
+function gameOverMainMenu(){
+  document.getElementById('gameover-overlay').classList.remove('show');
+  if(_timer) clearInterval(_timer);
+  showScreen('s-intro');
+}
+
+function showWin(){
+  if(_timer)clearInterval(_timer);
+  if(_countdownTimer){clearInterval(_countdownTimer);_countdownTimer=null;}
+  countdownActive=false;
+  document.getElementById('countdown-bar-wrap').style.display='none';
+  elapsedMs=Date.now()-startTime;
+
+  // Dragon race win
+  if(dragonRaceActive){
+    endDragonRace(true);
+    return;
+  }
+  const score=calcScore();
+  updateBestScores(score,elapsedMs,currentStep);
+
+  // Record food collected
+  foodCollected.push({
+    food: chosenGoalData.emoji, foodName: chosenGoalData.name, diet: chosenGoalData.diet,
+    animal: chosenAnimal.emoji, animalName: chosenAnimal.name, animalLatin: chosenAnimal.latin, animalFact: chosenAnimal.fact,
+    biome: chosenBiome.emoji, biomeName: chosenBiome.name,
+  });
+  saveFinds();
+
+  // Prehistoric win card adjustments
+  const isPrehistoric = chosenBiome.prehistoric;
+  document.getElementById('win-emoji').textContent=chosenGoalData.emoji;
+  document.getElementById('win-title').textContent= isPrehistoric ? 'EXTINCTION AVOIDED!' : (stepErrors===0?'PERFECT PATH!':'GOAL REACHED!');
+  document.getElementById('win-title').style.color = isPrehistoric ? '#f07000' : '';
+  document.getElementById('win-sub').textContent=`${chosenAnimal.name} · ${currentStep} steps · ${stepErrors} errors · ${fmtTime(elapsedMs)}`;
+  document.getElementById('win-score-big').textContent=score;
+  document.getElementById('win-best-score').textContent=best.score>0?best.score:'—';
+  document.getElementById('win-goal-emoji').textContent=chosenAnimal.emoji;
+
+  if(isPrehistoric){
+    const scavenged = chosenGoalData.emoji==='🦴'||chosenGoalData.emoji==='🥩';
+    const verb = scavenged ? 'scavenged' : 'found';
+    document.getElementById('win-goal-name').innerHTML=`<strong style="color:var(--text)">${chosenAnimal.name} ${verb} the ${chosenGoalData.name}!</strong>`;
+  } else {
+    document.getElementById('win-goal-name').innerHTML=`<strong style="color:var(--text)">${chosenAnimal.name} found ${chosenGoalData.name}!</strong>`;
+  }
+  document.getElementById('win-diet').textContent=chosenGoalData.diet;
+
+  // Tier unlock check
+  const tierRow = document.getElementById('win-tier-row');
+  const currentTier = loadTier();
+  if(!chosenBiome.prehistoric && chosenAnimal.stars === currentTier && currentTier < 5){
+    const newTier = currentTier + 1;
+    saveTier(newTier);
+    buildAnimalPicker(chosenBiome);
+    const newAnimals = getAnimalsAtTier(newTier);
+    if(tierRow){
+      tierRow.style.display = 'flex';
+      document.getElementById('win-tier-text').textContent = `All ${newTier}★ animals are now available!`;
+      const animalsEl = document.getElementById('win-tier-animals');
+      animalsEl.innerHTML = newAnimals.map(a => `<span title="${a.name}">${a.emoji}</span>`).join('');
+    }
+  } else {
+    if(tierRow) tierRow.style.display = 'none';
+  }
+  const relicWrap = document.getElementById('win-relic-row');
+  if(isPrehistoric && chosenAnimal.relic){
+    const isFirst = !hasRelic(chosenAnimal.emoji);
+    if(isFirst){
+      unlockRelic(chosenAnimal.emoji);
+      relicWrap.style.display='flex';
+      document.getElementById('win-relic-emoji').textContent=chosenAnimal.relic.emoji;
+      document.getElementById('win-relic-name').textContent=`${chosenAnimal.relic.name} unlocked!`;
+      document.getElementById('win-relic-desc').textContent=chosenAnimal.relic.desc;
+      document.getElementById('win-relic-badge').style.display='block';
+    } else {
+      relicWrap.style.display='none';
+    }
+  } else {
+    if(relicWrap) relicWrap.style.display='none';
+  }
+
+  // Check prehistoric unlock — show BEFORE win card
+  const justUnlocked = !isPrehistoricUnlocked() && !chosenBiome.prehistoric && chosenAnimal.stars === 5;
+  const avgStepMs = stepTimes.length > 0 ? stepTimes.reduce((a,b)=>a+b,0)/stepTimes.length : 99999;
+  const earnedType = getAbilityFromTime(avgStepMs);
+  showEarnedAbility(earnedType);
+  renderAbilities();
+
+  // Check achievements
+  const newAch = checkAchievements({ isPrehistoric: !!isPrehistoric, isDragon: false });
+  renderAchievementsInWinCard(newAch, 'win-achievements-earned');
+  updateAchMenuCounter();
+
+  if(justUnlocked){
+    unlockPrehistoric();
+    renderFoodPanel();
+    showPrehistoricUnlockOverlay(() => {
+      document.getElementById('win-overlay').classList.add('show');
+    });
+  } else {
+    renderFoodPanel();
+    document.getElementById('win-overlay').classList.add('show');
+  }
+}
+
+// ═══════════════════════════════════════════
+//  DRAGON RACE FUNCTIONS
+// ═══════════════════════════════════════════
+function checkDragonRaceCard(){
+  const relics = loadRelics();
+  const allRelicsCollected = PREHISTORIC_BIOME.animals.every(a => relics.includes(a.emoji));
+  const card = document.getElementById('dragon-race-card');
+  if(card) card.style.display = allRelicsCollected ? 'flex' : 'none';
+  const badge = document.getElementById('dragon-badge-menu');
+  if(badge) badge.style.display = hasDragonBadge() ? 'inline' : 'none';
+}
+
+function showDragonRaceScreen(){
+  showScreen('s-dragon');
+  const grid = document.getElementById('dragon-animal-grid');
+  grid.innerHTML = '';
+  DRAGON_RACE_ANIMALS.forEach(a => {
+    const c = document.createElement('div');
+    c.className = 'animal-card';
+    c.innerHTML = `<div class="ae">${a.emoji}</div><div class="an">${a.name}</div><div style="font-size:.5rem;color:#e03020">★★★★★</div>`;
+    c.addEventListener('click', () => startDragonRace(a));
+    grid.appendChild(c);
+  });
+}
+
+function startDragonRace(animal){
+  dragonRaceAnimal = animal;
+  dragonRaceGoalData = animal.goals[Math.floor(Math.random()*animal.goals.length)];
+
+  // Use a forest-like biome for the race
+  chosenBiome = {
+    ...PREHISTORIC_BIOME,
+    name:'Dragon Race', emoji:'🐉',
+    forestEmojis:['🔥','💀','🦴','🔥','💀','🌋','🔥','💀','🦴','🔥'],
+  };
+  chosenAnimal = animal;
+  chosenGoalData = dragonRaceGoalData;
+  dragonRaceActive = true;
+  dragonStep = 0;
+
+  // Set up game
+  activeMods = { opChain:true, reverse:true, fog:true };
+  showGameScreen();
+  document.getElementById('hero-badge').textContent = animal.emoji;
+  document.getElementById('biome-tag').textContent = '🐉 Dragon Race';
+  newGame();
+}
+
+function startDragonAI(){
+  // Dragon gets its own path — different from player's path
+  const savedPath = path.slice();
+  dragonPath = generatePath();
+  path = savedPath; // restore player path
+
+  // Dragon speed: slightly faster than player's historical avg step time
+  // Use best time as proxy; default 2.5s per step
+  const histAvg = best.timeMs < Infinity ? (best.timeMs / 15) : 2500;
+  dragonAvgMs = Math.max(800, histAvg * 0.85); // 15% faster than player avg
+
+  dragonStep = 0;
+  _dragonTimer = setInterval(()=>{
+    if(dragonStep < dragonPath.length - 1){
+      dragonStep++;
+      renderSVG();
+      if(dragonStep >= dragonPath.length - 1){
+        clearInterval(_dragonTimer); _dragonTimer = null;
+        // Dragon reached goal
+        endDragonRace(false);
+      }
+    }
+  }, dragonAvgMs);
+}
+
+function renderDragonOnSVG(svg, centers){
+  if(!dragonRaceActive || !dragonPath.length) return;
+  const dragonIdx = dragonPath[dragonStep];
+  const goalIdx = dragonPath[dragonPath.length-1];
+  const {cx,cy} = centers[dragonIdx];
+  // Draw dragon visited trail
+  for(let i=0;i<dragonStep;i++){
+    const didx=dragonPath[i];
+    const {cx:dx,cy:dy}=centers[didx];
+    const t=el('polygon',{points:hexPts(dx,dy,HEX_SIZE-2),fill:'rgba(139,0,0,.18)',stroke:'#8b0000','stroke-width':'1'});
+    svg.appendChild(t);
+  }
+  // Draw dragon emoji
+  const dEmoji = el('text',{x:cx.toFixed(2),y:(cy-HEX_SIZE*.15).toFixed(2),'text-anchor':'middle','dominant-baseline':'central','font-size':(HEX_SIZE*.7).toFixed(1),opacity:'0.9'});
+  dEmoji.style.pointerEvents='none';
+  dEmoji.textContent='🐉';
+  svg.appendChild(dEmoji);
+}
+
+function endDragonRace(playerWon){
+  dragonRaceActive = false;
+  if(_dragonTimer){ clearInterval(_dragonTimer); _dragonTimer=null; }
+  if(_timer){ clearInterval(_timer); _timer=null; }
+
+  // Consume all relics
+  saveRelics([]);
+  checkDragonRaceCard();
+  renderFoodPanel();
+
+  const overlay = document.getElementById('dragon-result-overlay');
+
+  if(playerWon){
+    const prev = loadDragonBadge();
+    const score = calcScore();
+    if(!prev || score > prev.score){
+      saveDragonBadge({score, animal: dragonRaceAnimal.emoji, date: Date.now()});
+    }
+    // Record find
+    foodCollected.push({
+      food: dragonRaceGoalData.emoji, foodName: dragonRaceGoalData.name, diet: dragonRaceGoalData.diet,
+      animal: dragonRaceAnimal.emoji, animalName: dragonRaceAnimal.name, animalLatin: dragonRaceAnimal.latin, animalFact: dragonRaceAnimal.fact,
+      biome: '🐉', biomeName: 'Dragon Race',
+    });
+    saveFinds();
+    // Update best score with dragon biome emoji
+    const _savedBiome = chosenBiome;
+    chosenBiome = { emoji: '🐉', prehistoric: false };
+    updateBestScores(score, elapsedMs, currentStep);
+    chosenBiome = _savedBiome;
+    renderFoodPanel();
+    // Populate win card
+    document.getElementById('dr-goal-emoji').textContent = dragonRaceGoalData.emoji;
+    document.getElementById('dr-sub').textContent = `${dragonRaceAnimal.name} · ${currentStep} steps · ${fmtTime(elapsedMs)}`;
+    document.getElementById('dr-score').textContent = score;
+    document.getElementById('dr-time').textContent = fmtTime(elapsedMs);
+    document.getElementById('dr-animal-emoji').textContent = dragonRaceAnimal.emoji;
+    document.getElementById('dr-find-text').textContent = `${dragonRaceAnimal.name} found ${dragonRaceGoalData.name}!`;
+    document.getElementById('dr-diet').textContent = dragonRaceGoalData.diet;
+    document.getElementById('dragon-badge-menu').style.display = 'inline';
+    document.getElementById('dragon-win-card').style.display = 'block';
+    document.getElementById('dragon-lose-card').style.display = 'none';
+    // Check dragon achievements
+    const newDragAch = checkAchievements({ isPrehistoric: false, isDragon: true });
+    renderAchievementsInWinCard(newDragAch, 'dragon-win-achievements');
+    updateAchMenuCounter();
+  } else {
+    document.getElementById('dragon-win-card').style.display = 'none';
+    document.getElementById('dragon-lose-card').style.display = 'block';
+  }
+  overlay.style.display = 'flex';
+}
+
+function closeDragonResult(){
+  document.getElementById('dragon-result-overlay').style.display = 'none';
+  dragonRaceActive = false;
+  showScreen('s-intro');
+  checkDragonRaceCard();
+}
+
+// ═══════════════════════════════════════════
+function renderFoodPanel(){
+  const makeChips = (containerId) => {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (!foodCollected.length) {
+      container.innerHTML = '<span class="food-empty">Nothing found yet…</span>';
+      return;
+    }
+    container.innerHTML = '';
+    foodCollected.forEach((f, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'food-chip';
+      chip.title = f.foodName + ' · ' + f.animalName;
+      chip.innerHTML = `<span class="fc-food">${f.food}</span><span class="fc-animal">${f.animal}</span>`;
+      chip.addEventListener('click', () => showFindDetail(i));
+      container.appendChild(chip);
+    });
+  };
+  makeChips('intro-food-grid');
+  const introPanel = document.getElementById('intro-food-panel');
+  if (introPanel) introPanel.style.display = foodCollected.length ? 'flex' : 'none';
+
+  // Render relics panel
+  const relicsGrid = document.getElementById('intro-relics-grid');
+  const relicsPanel = document.getElementById('intro-relics-panel');
+  if(relicsGrid && relicsPanel){
+    const unlockedRelics = loadRelics();
+    if(unlockedRelics.length){
+      relicsPanel.style.display = 'flex';
+      relicsGrid.innerHTML = '';
+      PREHISTORIC_BIOME.animals.forEach(a => {
+        if(unlockedRelics.includes(a.emoji)){
+          const chip = document.createElement('div');
+          chip.className = 'food-chip';
+          chip.title = a.relic.name + ' · ' + a.name;
+          chip.innerHTML = `<span class="fc-food">${a.relic.emoji}</span><span class="fc-animal">${a.emoji}</span>`;
+          relicsGrid.appendChild(chip);
+        }
+      });
+    } else {
+      relicsPanel.style.display = 'none';
+    }
+    checkDragonRaceCard();
+  }
+}
+
+function showFindDetail(idx) {
+  const f = foodCollected[idx];
+  if (!f) return;
+  document.getElementById('fd-animal-emoji').textContent = f.animal;
+  document.getElementById('fd-animal-name').textContent  = f.animalName;
+  document.getElementById('fd-animal-latin').textContent = f.animalLatin;
+  document.getElementById('fd-fact').innerHTML           = f.animalFact;
+  document.getElementById('fd-food-emoji').textContent   = f.food;
+  document.getElementById('fd-food-name').textContent    = f.foodName;
+  document.getElementById('fd-diet').textContent         = f.diet;
+  document.getElementById('fd-biome').textContent        = f.biome + ' ' + f.biomeName + ' biome';
+  document.getElementById('find-overlay').classList.add('show');
+}
+
+// ═══════════════════════════════════════════
+//  TUTORIAL
+// ═══════════════════════════════════════════
+
+const TUT_STEPS = [
+  { // 0
+    text: 'Welcome to <strong>Wild Maze</strong>! 🦊 You\'re a Fox exploring a hexagonal forest, looking for hidden food.',
+    target: null, nextLabel: 'Next →',
+  },
+  { // 1
+    text: 'You can only see the numbers on the <strong>6 hexagons directly around you</strong>. An operation is shown — apply it to your number and tap the right neighbour.',
+    target: null, nextLabel: 'Next →',
+  },
+  { // 2 — wait for first correct tap (bubble hidden)
+    text: 'Your number is <strong>5</strong>. The operation is <strong>+3</strong> → answer is <strong>8</strong>. Find <strong>8</strong> among your neighbours and tap it!',
+    target: null, nextLabel: null, waitForTap: true,
+  },
+  { // 3 — shown after first tap, centered, then free play
+    text: '🎉 <strong>Correct!</strong> Now continue the path on your own — follow each operation until you find the hidden food goal!',
+    target: null, nextLabel: 'OK! →', afterTap: true,
+  },
+  { // 4 — shown only after full path complete
+    text: '🎉 <strong>You found the food!</strong> You\'re ready to play for real. Remember: tap "I\'M READY!" to start the timer each game. Good luck! 🌲',
+    target: null, nextLabel: '🎮 Play now!', isLast: true,
+  },
+];
+
+let tutStep = 0;
+let tutMode = false;
+let tutPhase = 'intro'; // 'intro' | 'waitTap' | 'celebrate' | 'freeplay' | 'done'
+
+function showTutBubble(text, btnLabel, onBtn) {
+  const bubble  = document.getElementById('tut-bubble');
+  const nextBtn = document.getElementById('tut-next-btn');
+  const overlay = document.getElementById('tutorial-overlay');
+  document.getElementById('tut-text').innerHTML = text;
+  document.getElementById('tut-highlight').style.display = 'none';
+  // Set position BEFORE showing to avoid flash
+  bubble.style.left = '50%';
+  bubble.style.top  = '50%';
+  bubble.style.bottom = 'auto';
+  bubble.style.transform = 'translate(-50%,-50%)';
+  bubble.style.visibility = 'visible';
+  nextBtn.style.display = btnLabel ? '' : 'none';
+  if (btnLabel) { nextBtn.textContent = btnLabel; nextBtn.onclick = onBtn; }
+  overlay.style.pointerEvents = 'all';
+}
+
+function hideTutBubble() {
+  document.getElementById('tut-bubble').style.visibility = 'hidden';
+  document.getElementById('tutorial-overlay').style.pointerEvents = 'none';
+}
+
+function showTutStep(idx) {
+  // Not used for step logic anymore — use phases
+}
+
+function runTutorial() {
+  tutPhase = 'intro';
+
+  function s5() {
+    showTutBubble('Your number is <strong>5</strong>. The operation is <strong>+3</strong> → answer is <strong>8</strong>. Find <strong>8</strong> among your neighbours and tap it!',
+      'OK, I\'ll try! →', () => { tutPhase = 'waitTap'; hideTutBubble(); });
+  }
+  function s4() {
+    showTutBubble('You can only see the numbers on the <strong>6 hexagons around you</strong>. An operation is shown — apply it to your current number and tap the neighbour with the result.',
+      'Next →', s5);
+  }
+  function s3() {
+    showTutBubble('🏆 Your <strong>score</strong> appears on the win card. Every correct step earns points. Speed bonuses add more, errors and time reduce it.',
+      'Next →', s4);
+  }
+  function s2() {
+    showTutBubble('❤️❤️❤️ You have <strong>3 lives</strong>. Each wrong tap costs one heart. Lose all 3 and it\'s <strong>game over</strong>! Don\'t worry — you\'ll see what that looks like in a moment.',
+      'Next →', s3);
+  }
+  function s1() {
+    showTutBubble('⏱ See the <strong>timer at the top</strong>? It\'s counting now! The faster you finish the path, the higher your score.',
+      'Next →', s2);
+  }
+  showTutBubble('Welcome to <strong>Wild Maze</strong>! 🦊 You\'re a Fox exploring a hexagonal forest, looking for hidden food.',
+    'Next →', s1);
+}
+
+// Called when game over happens during tutorial
+function tutGameOver() {
+  if (!tutMode) return;
+  if (_timer) clearInterval(_timer);
+  showTutBubble(
+    '💀 <strong>Game Over!</strong> That\'s what happens when you lose all 3 hearts in a real game. For the tutorial, here are <strong>3 more hearts</strong> — keep going and find the food!',
+    'Try again! ❤️❤️❤️',
+    () => {
+      // Restore lives and continue
+      stepErrors = 0;
+      updateStats();
+      tutPhase = tutPhase === 'freeplay' ? 'freeplay' : 'waitTap';
+      hideTutBubble();
+      // Restart timer
+      startTime = Date.now() - elapsedMs;
+      _timer = setInterval(()=>{ elapsedMs = Date.now()-startTime; updateTimer(); }, 200);
+    }
+  );
+}
+
+function tutCorrectTap() {
+  if (!tutMode) return;
+
+  if (tutPhase === 'waitTap') {
+    tutPhase = 'celebrate';
+    document.getElementById('tutorial-overlay').style.pointerEvents = 'all';
+    showTutBubble(
+      '🎉 <strong>Correct!</strong> Now continue the path on your own — follow each operation until you find the hidden food goal!',
+      'OK! →',
+      () => {
+        tutPhase = 'freeplay';
+        hideTutBubble();
+      }
+    );
+    return;
+  }
+
+  if (tutPhase === 'freeplay' && currentStep >= path.length - 1) {
+    tutPhase = 'done';
+    setTimeout(() => {
+      showTutBubble(
+        '🎉 <strong>You found the food!</strong> One more thing — finish games fast to earn <strong>Abilities</strong>: 🤖 Auto, 🧊 Freeze, or ❤️ Life. Use them mid-game from the ability bar. You\'re ready! 🌲',
+        '🎮 Play now!',
+        endTutorial
+      );
+    }, 500);
+  }
+}
+
+function startTutorial() {
+  chosenBiome  = BIOMES[0];
+  chosenAnimal = BIOMES[0].animals.find(a => a.name === 'Fox') || BIOMES[0].animals[0];
+  chosenGoalData = chosenAnimal.goals[0];
+  activeMods = { opChain:false, reverse:false, fog:false };
+
+  document.documentElement.style.setProperty('--accent', chosenBiome.accent);
+  document.documentElement.style.setProperty('--border', chosenBiome.border);
+
+  showGameScreen();
+  document.getElementById('hero-badge').textContent = chosenAnimal.emoji;
+  document.getElementById('biome-tag').textContent  = chosenBiome.emoji + ' ' + chosenBiome.name;
+
+  tutMode           = true;
+  tutPhase          = 'intro';
+  setTimeout(() => runTutorial(), 300);
+
+  // Build a fixed game so bubble text always matches the screen
+  newGame();
+
+  // Override path and cells with fixed known values
+  // Path: 4 steps through interior cells
+  // We pick 5 cell indices in the 8×8 grid (interior)
+  const G = gridSize; // 8
+  // Fixed interior indices: row3col3, row3col4, row4col4, row4col5, row5col5
+  const fixedPath = [
+    3*G+3, // row3,col3
+    3*G+4, // row3,col4
+    4*G+4, // row4,col4
+    4*G+5, // row4,col5
+    5*G+4, // row5,col4 (goal)
+  ];
+  path = fixedPath;
+
+  // Fixed cell values matching the bubble text
+  // step 0: current=5, op=+3 → next=8
+  // step 1: current=8, op=×2 → next=16
+  // step 2: current=16, op=-7 → next=9
+  // step 3: current=9, op=+4 → next=13 (goal)
+  cells[fixedPath[0]] = 5;
+  cells[fixedPath[1]] = 8;
+  cells[fixedPath[2]] = 16;
+  cells[fixedPath[3]] = 9;
+  cells[fixedPath[4]] = 13;
+
+  document.getElementById('ready-bar').classList.add('hide');
+  gameStarted = true;
+  stepMod = null;
+  window._op = { sym:'+', operand:3, text:'+3' };
+  window._tv = 8;
+  document.getElementById('op-text').textContent = '+3';
+  renderSVG();
+
+  // Start timer like a real game
+  startTime = Date.now(); elapsedMs = 0; _stepStartTime = Date.now();
+  _timer = setInterval(()=>{ elapsedMs = Date.now()-startTime; updateTimer(); }, 200);
+
+  document.getElementById('tutorial-overlay').classList.add('active');
+  try { localStorage.setItem('wm_tutorial_done', '1'); } catch {}
+}
+
+function positionTutBubble(targetEl) {
+  const bubble    = document.getElementById('tut-bubble');
+  const highlight = document.getElementById('tut-highlight');
+  const bw = 280, margin = 10;
+
+  bubble.style.transform = 'none';
+  bubble.style.bottom    = 'auto';
+  bubble.style.top       = 'auto';
+
+  if (targetEl) {
+    const r = targetEl.getBoundingClientRect();
+    highlight.style.cssText = `left:${r.left-3}px;top:${r.top-3}px;width:${r.width+6}px;height:${r.height+6}px;display:block`;
+
+    const bx = Math.max(margin, Math.min(window.innerWidth - bw - margin, r.left + r.width/2 - bw/2));
+
+    // Always place bubble ABOVE the target so it never covers it
+    const spaceAbove = r.top - margin;
+    if (spaceAbove >= 140) {
+      bubble.style.top  = 'auto';
+      bubble.style.bottom = (window.innerHeight - r.top + 10) + 'px';
+    } else {
+      // Not enough space above — place below but this only happens for very top elements
+      bubble.style.top  = (r.bottom + 10) + 'px';
+      bubble.style.bottom = 'auto';
+    }
+    bubble.style.left = bx + 'px';
+  } else {
+    highlight.style.display = 'none';
+    bubble.style.left      = '50%';
+    bubble.style.top       = '50%';
+    bubble.style.transform = 'translate(-50%,-50%)';
+  }
+}
+
+function handlePlayBtn() {
+  try {
+    if (!localStorage.getItem('wm_tutorial_done')) {
+      startTutorial();
+      return;
+    }
+  } catch {}
+  showScreen('s-biome');
+}
+
+function skipTutorial() {
+  document.getElementById('tutorial-overlay').classList.remove('active');
+  tutMode = false; tutPhase = 'intro';
+  if (_timer) clearInterval(_timer);
+  try { localStorage.setItem('wm_tutorial_done', '1'); } catch {}
+  showScreen('s-biome');
+}
+
+function endTutorial() {
+  document.getElementById('tutorial-overlay').classList.remove('active');
+  tutMode = false; tutPhase = 'intro';
+  if (_timer) clearInterval(_timer);
+  showScreen('s-biome');
+}
+
+// On init: check if tutorial should be shown automatically
+function checkFirstTime() {
+  try {
+    if (!localStorage.getItem('wm_tutorial_done')) {
+      // Highlight tutorial button gently
+      const btn = document.getElementById('tutorial-btn');
+      if (btn) btn.style.borderColor = 'var(--accent)';
+    }
+  } catch {}
+}
+buildBiomePicker();
+loadBest();
+foodCollected = loadFinds();
+gameAbilities = loadAbilities();
+renderBestScores();
+renderFoodPanel();
+renderAbilities();
+checkDragonRaceCard();
+checkFirstTime();
+updateAchMenuCounter();
+
+let _rt;
+window.addEventListener('resize',()=>{
+  clearTimeout(_rt);_rt=setTimeout(()=>{if(document.getElementById('game-screen').style.display!=='none')renderSVG()},150)
+});
+</script>
+</body>
+</html>
