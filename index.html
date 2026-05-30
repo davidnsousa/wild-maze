@@ -292,6 +292,7 @@ h1 small{display:block;font-family:'Space Mono',monospace;font-size:.58rem;font-
     <button class="ic-btn-sec" id="tutorial-btn" onclick="startTutorial()">🎓 Tutorial</button>
     <button class="ic-btn-sec" onclick="showAchievements()">🏆 Achievements <span id="ach-menu-counter" style="font-size:.6rem;font-weight:800;color:var(--dim);margin-left:4px"></span></button>
     <button class="ic-btn-sec" onclick="showInstructions()">📖 How to Play</button>
+    <button class="ic-btn-sec" id="install-btn" style="display:none" onclick="installPWA()">📲 Add to Home Screen</button>
     <button class="ic-btn-sec" onclick="document.getElementById('settings-overlay').classList.add('show')">⚙️ Settings</button>
   </div>
 </div>
@@ -2772,6 +2773,35 @@ window.addEventListener('resize',()=>{
 });
 </script>
 <script>
+// ═══════════════════════════════════════════
+//  PWA INSTALL PROMPT
+// ═══════════════════════════════════════════
+let _installPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _installPrompt = e;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'block';
+});
+
+window.addEventListener('appinstalled', () => {
+  _installPrompt = null;
+  const btn = document.getElementById('install-btn');
+  if (btn) btn.style.display = 'none';
+});
+
+async function installPWA() {
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  const { outcome } = await _installPrompt.userChoice;
+  if (outcome === 'accepted') {
+    _installPrompt = null;
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.style.display = 'none';
+  }
+}
+
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
 }
