@@ -1,0 +1,10 @@
+{
+  "name": "Wild Maze",
+  "short_name": "Wild Maze",
+  "description": "A nature adventure number game — explore hexagonal mazes as wild animals searching for food.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#1a2810",
+  "theme_color": "#1a2810"
+}
