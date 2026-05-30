@@ -1,10 +1,29 @@
 {
   "name": "Wild Maze",
   "short_name": "Wild Maze",
+  "id": "wild-maze",
   "description": "A nature adventure number game — explore hexagonal mazes as wild animals searching for food.",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "display": "fullscreen",
   "orientation": "portrait",
   "background_color": "#1a2810",
-  "theme_color": "#1a2810"
+  "theme_color": "#1a2810",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["games", "education"],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
